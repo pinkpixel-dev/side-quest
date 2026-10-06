@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <title>Side Quest · Vision Spike</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top">
+        <h1>Vision spike</h1>
+        <p id="env" class="mono dim"></p>
+      </header>
+
+      <section class="panel" aria-labelledby="model-h">
+        <h2 id="model-h">1 · Model</h2>
+        <fieldset class="choices" id="models"></fieldset>
+        <button id="load" class="btn primary" type="button">Load model</button>
+        <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+        <p id="status" class="mono" role="status" aria-live="polite">Not loaded</p>
+      </section>
+
+      <section class="panel" aria-labelledby="photo-h">
+        <h2 id="photo-h">2 · Quest + photo</h2>
+        <label class="field">
+          <span>Quest</span>
+          <select id="quest"></select>
+        </label>
+        <label class="field">
+          <span>Image budget (tokens)</span>
+          <select id="budget"></select>
+        </label>
+        <label class="btn file">
+          <input id="photo" type="file" accept="image/*" />
+          Take or pick a photo
+        </label>
+        <img id="preview" alt="Selected photo" hidden />
+        <p id="photo-info" class="mono dim"></p>
+        <button id="run" class="btn primary" type="button" disabled>Analyze</button>
+      </section>
+
+      <section class="panel" aria-labelledby="out-h">
+        <h2 id="out-h">3 · Result</h2>
+        <dl id="stats" class="stats mono"></dl>
+        <pre id="raw" class="mono out" aria-label="Raw model output"></pre>
+        <pre id="parsed" class="mono out" aria-label="Parsed JSON"></pre>
+        <button id="copy" class="btn" type="button" disabled>Copy report</button>
+      </section>
+    </main>
+    <script type="module" src="../src/spike/main.ts"></script>
+  </body>
+</html>
