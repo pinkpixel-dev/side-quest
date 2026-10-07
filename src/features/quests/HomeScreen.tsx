@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Compass } from 'lucide-react';
+import { ArrowRight, Compass, Radio } from 'lucide-react';
 import { LinkButton } from '../../components/Button';
 import { ModelStatus } from '../../components/ModelStatus';
 import { Link } from '../../app/router';
+import { useHomeBase } from '../../app/homebase';
 import { allCreatures } from '../../lib/db/database';
 import type { Creature } from '../creatures/creatureSchemas';
 import { CreatureRenderer } from '../creatures/CreatureRenderer';
@@ -10,6 +11,7 @@ import { useActiveQuest } from './useActiveQuest';
 
 export function HomeScreen() {
   const { quest } = useActiveQuest();
+  const { role } = useHomeBase();
   const [creatures, setCreatures] = useState<Creature[] | null>(null);
 
   useEffect(() => {
@@ -32,6 +34,12 @@ export function HomeScreen() {
           <ModelStatus />
         </div>
         {quest && <p className="text-sm text-fog">Current: {quest.title}</p>}
+        {role === 'base' && (
+          <Link href="/base" className="inline-flex items-center gap-2 justify-self-start rounded-md text-moss hover:underline">
+            <Radio className="size-4" aria-hidden />
+            Home base is running. Pair your phone
+          </Link>
+        )}
       </section>
 
       <section aria-labelledby="home-creatures" className="anim-rise grid gap-4" style={{ animationDelay: '120ms' }}>

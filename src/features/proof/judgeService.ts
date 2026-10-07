@@ -1,6 +1,8 @@
 import type { GemmaClient } from '../../lib/gemma/client';
 import { generateStructured } from '../../lib/ai/structured';
-import { judgementSchema, type Judgement, type Rarity } from '../creatures/creatureSchemas';
+import { seedFromBlob } from '../../lib/random';
+import { judgementSchema, type Judgement, type Palette, type Rarity } from '../creatures/creatureSchemas';
+import { paletteFromPhoto, rollRarity } from '../creatures/hatch';
 import type { Quest } from '../quests/questSchemas';
 import { JUDGE_SHAPE, JUDGE_SYSTEM, judgePrompt } from './judgePrompts';
 
@@ -26,4 +28,19 @@ export function judgeFind(
     },
     { schema: judgementSchema, shape: JUDGE_SHAPE, onToken },
   );
+}
+
+export interface JudgedPhoto {
+  judgement: Judgement | null;
+  seed: number;
+  rarity: Rarity;
+  palette: Palette;
+}
+
+/** Seed, rarity, palette and Gemma's verdict for one photo. Shared by solo mode and the home base. */
+export async function judgePhoto(gemma: GemmaClient, quest: Quest, photo: Blob): Promise<JudgedPhoto> {
+  const seed = await seedFromBlob(photo);
+  const rarity = rollRarity(seed);
+  const [palette, judgement] = await Promise.all([paletteFromPhoto(photo, seed), judgeFind(gemma, quest, photo, rarity)]);
+  return { judgement, seed, rarity, palette };
 }

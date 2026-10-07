@@ -11,10 +11,12 @@ export interface HatchInput {
   rarity: Rarity;
   palette: Palette;
   judgement: Judgement;
+  /** Field finds hatch on the laptop: don't touch the laptop's own quest state. */
+  closeQuest?: boolean;
 }
 
 /** Builds the creature (Gemma's traits, or the local generator if they were unusable), saves it, closes the quest. */
-export async function hatchCreature({ quest, photo, seed, rarity, palette, judgement }: HatchInput): Promise<Creature> {
+export async function hatchCreature({ quest, photo, seed, rarity, palette, judgement, closeQuest = true }: HatchInput): Promise<Creature> {
   const traits = judgement.creature ?? localCreature(seed, judgement.observations);
   const photoId = newId();
   const creature: Creature = {
@@ -31,7 +33,9 @@ export async function hatchCreature({ quest, photo, seed, rarity, palette, judge
     discoveredAt: Date.now(),
   };
   await saveCreature(creature, { id: photoId, blob: photo, createdAt: creature.discoveredAt });
-  await saveQuest({ ...quest, status: 'completed' });
-  await setSetting('activeQuestId', null);
+  if (closeQuest) {
+    await saveQuest({ ...quest, status: 'completed' });
+    await setSetting('activeQuestId', null);
+  }
   return creature;
 }

@@ -32,7 +32,7 @@ const spikeRedirect = (): Plugin => ({
 export default defineConfig({
   plugins: [react(), tailwindcss(), dropOrtWasm(), spikeRedirect()],
   worker: { format: 'es', plugins: () => [dropOrtWasm()] },
-  // Phones reach the dev server through `npm run tunnel` (cloudflared quick tunnel).
+  // Lets a phone reach the dev server through a cloudflared quick tunnel if needed.
   server: { allowedHosts: ['.trycloudflare.com'] },
   build: {
     rollupOptions: {

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Compass, Info, LayoutGrid } from 'lucide-react';
+import { Compass, Info, LayoutGrid, Radio } from 'lucide-react';
 import { Link, matchPath, usePath } from './router';
 import { HomeScreen } from '../features/quests/HomeScreen';
 import { QuestScreen } from '../features/quests/QuestScreen';
@@ -8,12 +8,17 @@ import { UnlockScreen } from '../features/creatures/UnlockScreen';
 import { CollectionScreen } from '../features/collection/CollectionScreen';
 import { CreatureDetail } from '../features/collection/CreatureDetail';
 import { AboutScreen } from './AboutScreen';
+import { BaseScreen } from '../features/base/BaseScreen';
+import { PairScreen } from '../features/field/PairScreen';
+import { FieldNotices } from '../features/field/FieldNotices';
+import { useHomeBase } from './homebase';
 
 const NAV = [
   { href: '/quest', label: 'Quest', icon: Compass, active: ['/quest', '/proof', '/unlock'] },
   { href: '/collection', label: 'Creatures', icon: LayoutGrid, active: ['/collection', '/creature'] },
   { href: '/about', label: 'About', icon: Info, active: ['/about'] },
 ];
+const BASE_NAV = { href: '/base', label: 'Home base', icon: Radio, active: ['/base'] };
 
 function route(path: string): ReactNode {
   let p: Record<string, string> | null;
@@ -22,6 +27,8 @@ function route(path: string): ReactNode {
   if (path === '/proof') return <ProofScreen />;
   if (path === '/collection') return <CollectionScreen />;
   if (path === '/about') return <AboutScreen />;
+  if (path === '/base') return <BaseScreen />;
+  if (path === '/pair') return <PairScreen />;
   if ((p = matchPath('/unlock/:id', path))) return <UnlockScreen key={p.id} id={p.id} />;
   if ((p = matchPath('/creature/:id', path))) return <CreatureDetail key={p.id} id={p.id} />;
   return <p className="text-fog">Nothing out here. Try the quest page.</p>;
@@ -29,6 +36,8 @@ function route(path: string): ReactNode {
 
 export function App() {
   const path = usePath();
+  const { role } = useHomeBase();
+  const nav = role === 'base' ? [NAV[0], NAV[1], BASE_NAV, NAV[2]] : NAV;
   const isActive = (prefixes: string[]) => prefixes.some((pre) => path === pre || path.startsWith(`${pre}/`));
 
   return (
@@ -38,7 +47,7 @@ export function App() {
           Side Quest
         </Link>
         <nav aria-label="Main" className="hidden gap-1 md:flex">
-          {NAV.map(({ href, label, icon: Icon, active }) => (
+          {nav.map(({ href, label, icon: Icon, active }) => (
             <Link
               key={href}
               href={href}
@@ -52,14 +61,17 @@ export function App() {
         </nav>
       </header>
 
-      <main className="w-full px-4 py-6 sm:px-8 lg:py-10">{route(path)}</main>
+      <div className="grid content-start gap-2">
+        <FieldNotices />
+        <main className="w-full px-4 py-6 sm:px-8 lg:py-10">{route(path)}</main>
+      </div>
 
       {/* Phone nav sits at the bottom where thumbs are. */}
       <nav
         aria-label="Main"
-        className="sticky bottom-0 grid grid-cols-3 border-t border-ink-3 bg-ink/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="sticky bottom-0 grid auto-cols-fr grid-flow-col border-t border-ink-3 bg-ink/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        {NAV.map(({ href, label, icon: Icon, active }) => (
+        {nav.map(({ href, label, icon: Icon, active }) => (
           <Link
             key={href}
             href={href}

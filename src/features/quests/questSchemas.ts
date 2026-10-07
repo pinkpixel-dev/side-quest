@@ -14,7 +14,8 @@ export const questDraftSchema = z.object({
 });
 export type QuestDraft = z.infer<typeof questDraftSchema>;
 
-export type QuestStatus = 'active' | 'completed' | 'abandoned';
+/** `submitted`: field mode sent the photo home and is waiting on Gemma's verdict. */
+export type QuestStatus = 'active' | 'submitted' | 'completed' | 'abandoned';
 
 export interface Quest extends QuestDraft {
   id: string;

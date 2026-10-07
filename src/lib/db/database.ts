@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Quest } from '../../features/quests/questSchemas';
 import type { Creature } from '../../features/creatures/creatureSchemas';
+import type { FindStatus } from '../home/protocol';
 
 export interface StoredPhoto {
   id: string;
@@ -8,22 +9,40 @@ export interface StoredPhoto {
   createdAt: number;
 }
 
+/** Field mode: a photo on its way to (or back from) the home base. */
+export interface LocalFind {
+  id: string;
+  quest: Quest;
+  photo: Blob;
+  createdAt: number;
+  /** `queued` = still on the phone (offline or not sent yet). */
+  status: 'queued' | FindStatus;
+  creatureId?: string;
+  reason?: string;
+  /** The player has seen how it turned out. */
+  seen: boolean;
+}
+
 interface SideQuestDB extends DBSchema {
   quests: { key: string; value: Quest; indexes: { createdAt: number } };
   creatures: { key: string; value: Creature; indexes: { discoveredAt: number } };
   photos: { key: string; value: StoredPhoto };
   settings: { key: string; value: unknown };
+  finds: { key: string; value: LocalFind };
 }
 
 let dbPromise: Promise<IDBPDatabase<SideQuestDB>> | null = null;
 
 export function db(): Promise<IDBPDatabase<SideQuestDB>> {
-  dbPromise ??= openDB<SideQuestDB>('side-quest', 1, {
-    upgrade(d) {
-      d.createObjectStore('quests', { keyPath: 'id' }).createIndex('createdAt', 'createdAt');
-      d.createObjectStore('creatures', { keyPath: 'id' }).createIndex('discoveredAt', 'discoveredAt');
-      d.createObjectStore('photos', { keyPath: 'id' });
-      d.createObjectStore('settings');
+  dbPromise ??= openDB<SideQuestDB>('side-quest', 2, {
+    upgrade(d, oldVersion) {
+      if (oldVersion < 1) {
+        d.createObjectStore('quests', { keyPath: 'id' }).createIndex('createdAt', 'createdAt');
+        d.createObjectStore('creatures', { keyPath: 'id' }).createIndex('discoveredAt', 'discoveredAt');
+        d.createObjectStore('photos', { keyPath: 'id' });
+        d.createObjectStore('settings');
+      }
+      if (oldVersion < 2) d.createObjectStore('finds', { keyPath: 'id' });
     },
   });
   return dbPromise;
@@ -80,4 +99,14 @@ export async function getSetting<T>(key: string): Promise<T | undefined> {
 
 export async function setSetting(key: string, value: unknown): Promise<void> {
   await (await db()).put('settings', value, key);
+}
+
+// --- field finds ----------------------------------------------------------------
+
+export async function saveFind(find: LocalFind): Promise<void> {
+  await (await db()).put('finds', find);
+}
+
+export async function allFinds(): Promise<LocalFind[]> {
+  return (await db()).getAll('finds');
 }

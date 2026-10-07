@@ -3,20 +3,25 @@ import { Camera, Clock, Shuffle, Sparkles } from 'lucide-react';
 import { Button, LinkButton } from '../../components/Button';
 import { ModelStatus } from '../../components/ModelStatus';
 import { useGemma } from '../../app/gemma';
+import { useHomeBase } from '../../app/homebase';
+import { fieldApi } from '../../lib/home/client';
 import { startNewQuest } from './questService';
 import type { Quest } from './questSchemas';
 import { useActiveQuest } from './useActiveQuest';
 
 export function QuestScreen() {
   const { client, state } = useGemma();
+  const { role, pairing, finds } = useHomeBase();
   const { quest, setQuest } = useActiveQuest();
+  const onTheWay = finds.filter((f) => f.status === 'queued' || f.status === 'waiting').length;
+  const fromHome = role === 'field' && pairing ? () => fieldApi(pairing).nextQuest() : undefined;
   const [busy, setBusy] = useState(false);
   const started = useRef(false);
 
   const next = async (previous?: Quest) => {
     setBusy(true);
     try {
-      setQuest(await startNewQuest(client, previous));
+      setQuest(await startNewQuest(client, previous, fromHome));
     } finally {
       setBusy(false);
     }
@@ -24,7 +29,7 @@ export function QuestScreen() {
 
   // First visit with no quest in progress: hand one out right away.
   useEffect(() => {
-    if (quest === null && !started.current) {
+    if (quest === null && role !== 'checking' && !started.current) {
       started.current = true;
       next();
     }
@@ -74,6 +79,9 @@ export function QuestScreen() {
           Another quest
         </Button>
         <ModelStatus className="justify-self-start" />
+        {onTheWay > 0 && (
+          <p className="text-sm text-fog">{onTheWay === 1 ? '1 find on its way home' : `${onTheWay} finds on their way home`}</p>
+        )}
       </aside>
     </div>
   );

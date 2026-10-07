@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, RotateCcw, Shuffle, Sparkles } from 'lucide-react';
+import { ArrowLeft, Compass, RotateCcw, Send, Shuffle, Sparkles } from 'lucide-react';
 import { Button, LinkButton } from '../../components/Button';
 import { ModelStatus } from '../../components/ModelStatus';
 import { useGemma } from '../../app/gemma';
+import { useHomeBase } from '../../app/homebase';
+import { fieldApi } from '../../lib/home/client';
+import { submitFind } from '../field/fieldSync';
 import { navigate } from '../../app/router';
 import { preparePhoto, type PreparedImage } from '../../lib/images/preprocess';
-import { seedFromBlob } from '../../lib/random';
 import { hatchCreature } from '../creatures/creatureService';
-import { paletteFromPhoto, rollRarity } from '../creatures/hatch';
 import { Egg } from '../creatures/Egg';
 import { startNewQuest } from '../quests/questService';
 import { useActiveQuest } from '../quests/useActiveQuest';
-import { judgeFind } from './judgeService';
+import { judgePhoto } from './judgeService';
 import { PhotoPicker } from './PhotoPicker';
 
 type Phase =
@@ -19,10 +20,14 @@ type Phase =
   | { kind: 'preview' }
   | { kind: 'judging'; since: number }
   | { kind: 'not-quite'; reason: string }
-  | { kind: 'confused' };
+  | { kind: 'confused' }
+  | { kind: 'sent' };
 
 export function ProofScreen() {
   const { client, state, supported } = useGemma();
+  const { role, pairing, sync } = useHomeBase();
+  const field = role === 'field';
+  const fromHome = field && pairing ? () => fieldApi(pairing).nextQuest() : undefined;
   const { quest } = useActiveQuest();
   const [phase, setPhase] = useState<Phase>({ kind: 'pick' });
   const [photo, setPhoto] = useState<(PreparedImage & { url: string }) | null>(null);
@@ -49,12 +54,7 @@ export function ProofScreen() {
     if (!quest || !photo) return;
     setPhase({ kind: 'judging', since: Date.now() });
     try {
-      const seed = await seedFromBlob(photo.blob);
-      const rarity = rollRarity(seed);
-      const [palette, judgement] = await Promise.all([
-        paletteFromPhoto(photo.blob, seed),
-        judgeFind(client, quest, photo.blob, rarity),
-      ]);
+      const { judgement, seed, rarity, palette } = await judgePhoto(client, quest, photo.blob);
       if (!judgement) return setPhase({ kind: 'confused' });
       if (!judgement.passed) return setPhase({ kind: 'not-quite', reason: judgement.reason });
       const creature = await hatchCreature({ quest, photo: photo.blob, seed, rarity, palette, judgement });
@@ -65,8 +65,16 @@ export function ProofScreen() {
     }
   };
 
+  /** Field mode: queue the photo for the home base and get back outside. */
+  const sendHome = async () => {
+    if (!quest || !photo) return;
+    await submitFind(quest, photo.blob);
+    setPhase({ kind: 'sent' });
+    sync();
+  };
+
   const newQuest = async () => {
-    await startNewQuest(client, quest ?? undefined);
+    await startNewQuest(client, phase.kind === 'sent' ? undefined : (quest ?? undefined), fromHome);
     navigate('/quest', { replace: true });
   };
 
@@ -83,6 +91,11 @@ export function ProofScreen() {
 
         {phase.kind === 'judging' ? (
           <Judging since={phase.since} />
+        ) : phase.kind === 'sent' ? (
+          <div className="grid aspect-[4/3] place-items-center content-center gap-4 rounded-2xl border border-ink-3 bg-ink-2" role="status">
+            <Egg className="anim-bob w-36" />
+            <p className="px-6 text-center text-fog">On its way home. It'll hatch while you keep exploring.</p>
+          </div>
         ) : photo ? (
           <img src={photo.url} alt="Your photo" className="max-h-[60dvh] w-full rounded-2xl border border-ink-3 bg-ink-2 object-contain" />
         ) : (
@@ -102,9 +115,20 @@ export function ProofScreen() {
           <Notice title="Gemma lost the thread">That happens sometimes. Give it another go.</Notice>
         )}
 
-        {phase.kind !== 'judging' && (
+        {phase.kind === 'sent' && (
+          <Button icon={<Compass className="size-5" aria-hidden />} onClick={newQuest} className="text-lg">
+            Next quest
+          </Button>
+        )}
+
+        {phase.kind !== 'judging' && phase.kind !== 'sent' && (
           <>
-            {photo && (phase.kind === 'preview' || phase.kind === 'confused') && (
+            {photo && field && phase.kind === 'preview' && (
+              <Button icon={<Send className="size-5" aria-hidden />} onClick={sendHome} className="text-lg">
+                Send home
+              </Button>
+            )}
+            {photo && !field && (phase.kind === 'preview' || phase.kind === 'confused') && (
               <Button icon={<Sparkles className="size-5" aria-hidden />} disabled={!ready} onClick={judge} className="text-lg">
                 {phase.kind === 'confused' ? 'Try again' : 'Show Gemma'}
               </Button>
@@ -116,7 +140,8 @@ export function ProofScreen() {
                 New quest
               </Button>
             )}
-            {!ready && (
+            {field && <ModelStatus className="justify-self-start" />}
+            {!ready && !field && (
               <div className="grid justify-items-start gap-2 pt-2 text-sm text-fog">
                 {supported ? 'Gemma checks your photo right here on this device.' : "This device can't run Gemma. Try desktop Chrome or Edge."}
                 <ModelStatus />

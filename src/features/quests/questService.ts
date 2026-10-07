@@ -13,7 +13,8 @@ export function libraryQuest(recentTitles: string[]): QuestDraft {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-async function gemmaQuest(gemma: GemmaClient, recentTitles: string[]): Promise<QuestDraft | null> {
+/** Has Gemma write a fresh quest. Null when the output fails validation or the safety filter. */
+export async function writeQuest(gemma: GemmaClient, recentTitles: string[]): Promise<QuestDraft | null> {
   const category = QUEST_CATEGORIES[Math.floor(Math.random() * QUEST_CATEGORIES.length)];
   const draft = await generateStructured(
     gemma,
@@ -25,16 +26,24 @@ async function gemmaQuest(gemma: GemmaClient, recentTitles: string[]): Promise<Q
 }
 
 /**
- * Makes the next quest and marks it active. Uses Gemma when it's ready, otherwise (or
- * if Gemma's quest fails validation or the safety filter) a hand-written one.
+ * Makes the next quest and marks it active. Uses Gemma when it's ready (or, in field
+ * mode, a quest the home base wrote ahead of time), otherwise a hand-written one.
  */
-export async function startNewQuest(gemma: GemmaClient | null, previous?: Quest): Promise<Quest> {
+export async function startNewQuest(
+  gemma: GemmaClient | null,
+  previous?: Quest,
+  fromHome?: () => Promise<QuestDraft | null>,
+): Promise<Quest> {
   if (previous?.status === 'active') await saveQuest({ ...previous, status: 'abandoned' });
   const recentTitles = (await recentQuests()).map((q) => q.title);
 
   let draft: QuestDraft | null = null;
-  if (gemma?.state.status === 'ready') {
-    draft = await gemmaQuest(gemma, recentTitles).catch(() => null);
+  if (fromHome) {
+    const remote = await fromHome().catch(() => null);
+    const parsed = remote ? questDraftSchema.safeParse(remote) : null;
+    if (parsed?.success && isSafeQuest(parsed.data) && !recentTitles.includes(parsed.data.title)) draft = parsed.data;
+  } else if (gemma?.state.status === 'ready') {
+    draft = await writeQuest(gemma, recentTitles).catch(() => null);
   }
   const source = draft ? 'gemma' : 'library';
   draft ??= libraryQuest(recentTitles);
