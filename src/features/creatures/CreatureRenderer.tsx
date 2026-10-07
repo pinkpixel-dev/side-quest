@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { between, pick, seededRandom } from '../../lib/random';
 import type { Creature } from './creatureSchemas';
-import { CENTER, bodyShape, starPath } from './shapes';
+import { CENTER, bodyShape, nearestPoint, starPath, type BodyShape } from './shapes';
 
 const INK = 'oklch(0.22 0.02 130)';
 const CHEEK = 'oklch(0.78 0.11 5)';
@@ -10,7 +10,10 @@ const BARK = 'oklch(0.5 0.07 60)';
 const STONE = 'oklch(0.72 0.01 90)';
 const STROKE = { stroke: INK, strokeWidth: 3.2, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const };
 
-export type CreatureLook = Pick<Creature, 'body' | 'eyeStyle' | 'accessory' | 'palette' | 'seed' | 'rarity' | 'name'>;
+export type CreatureLook = Pick<
+  Creature,
+  'body' | 'eyeStyle' | 'accessory' | 'palette' | 'seed' | 'rarity' | 'name' | 'pattern' | 'extra'
+>;
 
 interface Props {
   creature: CreatureLook;
@@ -19,10 +22,10 @@ interface Props {
   animate?: boolean;
 }
 
-/** Layered SVG creature: shadow, feet, body, belly, spots, face, accessory, rarity extras. */
+/** Layered SVG creature: shadow, feet, extra, body, belly, pattern, face, accessory, rarity extras. */
 export function CreatureRenderer({ creature, className = '', animate = false }: Props) {
   const clipId = useId();
-  const { body, eyeStyle, accessory, palette, seed, rarity } = creature;
+  const { body, eyeStyle, accessory, palette, seed, rarity, pattern, extra } = creature;
   const shape = bodyShape(body, seed);
   const rand = seededRandom(seed);
   const [cx, cy] = CENTER;
@@ -60,11 +63,16 @@ export function CreatureRenderer({ creature, className = '', animate = false }: 
         ))}
 
         {body === 'sprout' && <SproutTop x={cx} y={shape.top + 4} />}
+        {extra && extra !== 'none' && <Extra kind={extra} shape={shape} palette={palette} />}
 
         <path d={shape.path} fill={palette.primary} />
         <g clipPath={`url(#${clipId})`}>
           <ellipse cx={cx} cy={cy + shape.ry * 0.45} rx={shape.rx * 0.6} ry={shape.ry * 0.5} fill={palette.secondary} />
-          {Array.from({ length: spots }, (_, i) => (
+          {/* Older creatures have no pattern and keep their original spots. */}
+          {pattern && pattern !== 'spots' ? (
+            <Pattern kind={pattern} shape={shape} seed={seed} accent={palette.accent} />
+          ) : (
+            Array.from({ length: spots }, (_, i) => (
             <circle
               key={i}
               cx={cx + between(rand, -shape.rx, shape.rx) * 0.8}
@@ -73,7 +81,8 @@ export function CreatureRenderer({ creature, className = '', animate = false }: 
               fill={palette.accent}
               opacity={0.6}
             />
-          ))}
+            ))
+          )}
           {rarity === 'uncommon' && (
             <ellipse
               cx={cx}
@@ -125,6 +134,95 @@ export function CreatureRenderer({ creature, className = '', animate = false }: 
           />
         ))}
     </svg>
+  );
+}
+
+/** Body markings, clipped to the body. Own seed stream so the face and spots never shift. */
+function Pattern({ kind, shape, seed, accent }: { kind: Creature['pattern']; shape: BodyShape; seed: number; accent: string }) {
+  const rand = seededRandom(seed ^ 0x1b873593);
+  const [cx, cy] = CENTER;
+  switch (kind) {
+    case 'stripes': {
+      const count = Math.floor(between(rand, 3, 5));
+      const gap = (shape.rx * 1.3) / count;
+      const bend = between(rand, -8, 8);
+      return (
+        <g stroke={accent} strokeWidth={between(rand, 5, 7)} strokeLinecap="round" fill="none" opacity={0.55}>
+          {Array.from({ length: count }, (_, i) => {
+            const x = cx + (i - (count - 1) / 2) * gap;
+            return <path key={i} d={`M${x},${shape.top - 4} Q${x + bend},${shape.top + 14} ${x},${shape.top + shape.ry * 0.55}`} />;
+          })}
+        </g>
+      );
+    }
+    case 'freckles':
+      return (
+        <g fill={INK} opacity={0.3}>
+          {Array.from({ length: Math.floor(between(rand, 8, 14)) }, (_, i) => (
+            <circle
+              key={i}
+              cx={cx + between(rand, -0.75, 0.75) * shape.rx}
+              cy={cy + between(rand, -0.75, 0.1) * shape.ry}
+              r={between(rand, 1.4, 2.6)}
+            />
+          ))}
+        </g>
+      );
+    case 'patches':
+      return (
+        <g fill={accent} opacity={0.55}>
+          {[-1, 1].map((side) => (
+            <ellipse
+              key={side}
+              cx={cx + side * shape.rx * between(rand, 0.6, 0.85)}
+              cy={cy + between(rand, -0.5, 0.2) * shape.ry}
+              rx={between(rand, 16, 24)}
+              ry={between(rand, 14, 22)}
+            />
+          ))}
+        </g>
+      );
+    default:
+      return null;
+  }
+}
+
+/** Ears, horns or a tail. Drawn behind the body so their bases tuck in. */
+function Extra({ kind, shape, palette }: { kind: Creature['extra']; shape: BodyShape; palette: Creature['palette'] }) {
+  const [cx, cy] = CENTER;
+  if (kind === 'tail') {
+    const [x, y] = nearestPoint(shape.points, [cx + shape.rx * 1.2, cy + shape.ry * 0.35]);
+    const d = `M${x - 6},${y} C${x + 16},${y + 2} ${x + 28},${y - 18} ${x + 16},${y - 32}`;
+    return (
+      <g fill="none" strokeLinecap="round">
+        <path d={d} stroke={INK} strokeWidth={13} />
+        <path d={d} stroke={palette.primary} strokeWidth={7} />
+        <circle cx={x + 16} cy={y - 32} r={6.5} fill={palette.accent} {...STROKE} strokeWidth={2.6} />
+      </g>
+    );
+  }
+  return (
+    <g>
+      {[-1, 1].map((side) => {
+        const [x, y] = nearestPoint(shape.points, [cx + side * shape.rx * 0.5, shape.top]);
+        const t = `rotate(${side * 22} ${x} ${y})`;
+        return kind === 'horns' ? (
+          <path
+            key={side}
+            transform={t}
+            d={`M${x - 6},${y + 5} Q${x - 6},${y - 12} ${x + side * 6},${y - 20} Q${x + 6},${y - 8} ${x + 6},${y + 5}Z`}
+            fill="oklch(0.93 0.03 85)"
+            {...STROKE}
+            strokeWidth={2.6}
+          />
+        ) : (
+          <g key={side} transform={t}>
+            <path d={`M${x - 11},${y + 6} Q${x - 6},${y - 22} ${x},${y - 24} Q${x + 6},${y - 22} ${x + 11},${y + 6}Z`} fill={palette.primary} {...STROKE} />
+            <path d={`M${x - 5},${y + 2} Q${x - 3},${y - 12} ${x},${y - 14} Q${x + 3},${y - 12} ${x + 5},${y + 2}Z`} fill={palette.secondary} />
+          </g>
+        );
+      })}
+    </g>
   );
 }
 

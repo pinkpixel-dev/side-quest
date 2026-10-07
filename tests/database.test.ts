@@ -47,6 +47,8 @@ describe('quest and creature persistence', () => {
     });
     expect(creature.generatedLocally).toBe(true);
     expect(creature.accessory).toBe('leaf');
+    expect(creature.pattern).toBeDefined();
+    expect(creature.extra).toBeDefined();
     expect((await allCreatures()).map((c) => c.id)).toEqual([creature.id]);
     expect((await getPhoto(creature.photoId!))?.blob.size).toBe(photo.size);
     expect((await getQuest(quest.id))?.status).toBe('completed');

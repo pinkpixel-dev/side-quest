@@ -1,5 +1,6 @@
 import type { GemmaClient } from '../../lib/gemma/client';
 import { generateStructured } from '../../lib/ai/structured';
+import { recentCreatureTraits } from '../../lib/db/database';
 import { seedFromBlob } from '../../lib/random';
 import { judgementSchema, type Judgement, type Palette, type Rarity } from '../creatures/creatureSchemas';
 import { paletteFromPhoto, rollRarity } from '../creatures/hatch';
@@ -16,12 +17,13 @@ export function judgeFind(
   photo: Blob,
   rarity: Rarity,
   onToken?: (chunk: string) => void,
+  recent: Awaited<ReturnType<typeof recentCreatureTraits>> = [],
 ): Promise<Judgement | null> {
   return generateStructured(
     gemma,
     {
       system: JUDGE_SYSTEM,
-      prompt: judgePrompt(quest, rarity),
+      prompt: judgePrompt(quest, rarity, recent),
       image: photo,
       imageBudget: IMAGE_BUDGET,
       maxTokens: 260,
@@ -41,6 +43,10 @@ export interface JudgedPhoto {
 export async function judgePhoto(gemma: GemmaClient, quest: Quest, photo: Blob): Promise<JudgedPhoto> {
   const seed = await seedFromBlob(photo);
   const rarity = rollRarity(seed);
-  const [palette, judgement] = await Promise.all([paletteFromPhoto(photo, seed), judgeFind(gemma, quest, photo, rarity)]);
+  const recent = await recentCreatureTraits();
+  const [palette, judgement] = await Promise.all([
+    paletteFromPhoto(photo, seed),
+    judgeFind(gemma, quest, photo, rarity, undefined, recent),
+  ]);
   return { judgement, seed, rarity, palette };
 }

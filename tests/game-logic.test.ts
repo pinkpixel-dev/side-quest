@@ -3,7 +3,8 @@ import { FALLBACK_QUESTS } from '../src/features/quests/fallbackQuests';
 import { isSafeQuest, questDraftSchema } from '../src/features/quests/questSchemas';
 import { libraryQuest } from '../src/features/quests/questService';
 import { judgementSchema } from '../src/features/creatures/creatureSchemas';
-import { localCreature, paletteFromPixels, rollRarity } from '../src/features/creatures/hatch';
+import { avoidRepeat, localCreature, paletteFromPixels, rollLook, rollRarity } from '../src/features/creatures/hatch';
+import { judgePrompt } from '../src/features/proof/judgePrompts';
 import { parseStructured } from '../src/lib/ai/structured';
 import { seededRandom } from '../src/lib/random';
 
@@ -100,6 +101,34 @@ describe('creatures', () => {
     expect(hue(palette.primary)).toBeGreaterThan(90);
     expect(hue(palette.primary)).toBeLessThan(150);
     expect(hue(palette.accent)).toBeLessThan(20);
+  });
+
+  it('nudges the hue per seed so the same photo colors give different creatures', () => {
+    const px = new Uint8ClampedArray(100 * 4);
+    for (let i = 0; i < 100; i++) px.set([60, 150, 60, 255], i * 4);
+    const primaries = new Set(Array.from({ length: 12 }, (_, seed) => paletteFromPixels(px, seed).primary));
+    expect(primaries.size).toBeGreaterThan(6);
+  });
+
+  it('rolls every pattern and extra, deterministically', () => {
+    expect(rollLook(321)).toEqual(rollLook(321));
+    const looks = Array.from({ length: 400 }, (_, seed) => rollLook(seed));
+    expect(new Set(looks.map((l) => l.pattern)).size).toBe(5);
+    expect(new Set(looks.map((l) => l.extra)).size).toBe(4);
+  });
+
+  it('swaps the body when Gemma repeats a recent creature exactly', () => {
+    const traits = { body: 'blob', eyeStyle: 'dot', accessory: 'leaf' } as const;
+    expect(avoidRepeat(traits, [{ ...traits, accessory: 'none' }], 5)).toEqual(traits);
+    const swapped = avoidRepeat(traits, [traits], 5);
+    expect(swapped.body).not.toBe('blob');
+    expect(swapped.eyeStyle).toBe('dot');
+  });
+
+  it('tells Gemma which combinations to avoid', () => {
+    const quest = { title: 'Moss', description: 'Find moss.', validationHint: 'moss' };
+    expect(judgePrompt(quest, 'common')).not.toContain('Recent creatures');
+    expect(judgePrompt(quest, 'common', [{ body: 'blob', eyeStyle: 'dot', accessory: 'leaf' }])).toContain('blob/dot/leaf');
   });
 
   it('still makes a palette from a blank image', () => {

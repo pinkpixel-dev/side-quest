@@ -2,8 +2,12 @@ import { between, pick, seededRandom } from '../../lib/random';
 import {
   ACCESSORIES,
   BODIES,
+  EXTRAS,
   EYES,
+  PATTERNS,
   type CreatureAccessory,
+  type CreatureExtra,
+  type CreaturePattern,
   type CreatureTraits,
   type Palette,
   type Rarity,
@@ -52,6 +56,27 @@ export function localCreature(seed: number, observations: string[]): CreatureTra
     eyeStyle: pick(rand, EYES),
     accessory,
   };
+}
+
+/** Pattern and extra come from the seed, on their own stream so nothing else shifts. */
+export function rollLook(seed: number): { pattern: CreaturePattern; extra: CreatureExtra } {
+  const rand = seededRandom(seed ^ 0x3c6ef372);
+  return { pattern: pick(rand, PATTERNS), extra: pick(rand, EXTRAS) };
+}
+
+type ShapeTraits = Pick<CreatureTraits, 'body' | 'eyeStyle' | 'accessory'>;
+
+/**
+ * Gemma has favorite picks. If its body / eyes / accessory exactly repeat a recent creature,
+ * swap the body (the most visible trait) for a different one.
+ */
+export function avoidRepeat<T extends ShapeTraits>(traits: T, recent: ShapeTraits[], seed: number): T {
+  const repeats = recent.some(
+    (r) => r.body === traits.body && r.eyeStyle === traits.eyeStyle && r.accessory === traits.accessory,
+  );
+  if (!repeats) return traits;
+  const rand = seededRandom(seed ^ 0x2545f491);
+  return { ...traits, body: pick(rand, BODIES.filter((b) => b !== traits.body)) };
 }
 
 // --- palette ---------------------------------------------------------------------
@@ -117,10 +142,13 @@ export function paletteFromPixels(data: Uint8ClampedArray, seed: number): Palett
     l: 0.6,
   };
 
+  // A seeded nudge so two photos of the same green lawn don't hatch the same green creature.
+  const shift = seededRandom(seed ^ 0x7a1e5d0b);
+  const hue = (main.h + between(shift, -25, 25) + 360) % 360;
   const primaryS = clamp(main.s * 1.2, 0.3, 0.7);
   return {
-    primary: hsl(main.h, primaryS, clamp(main.l, 0.52, 0.68)),
-    secondary: hsl(main.h, clamp(primaryS * 0.7, 0.2, 0.55), 0.84),
+    primary: hsl(hue, primaryS, clamp(main.l + between(shift, -0.08, 0.08), 0.48, 0.72)),
+    secondary: hsl(hue, clamp(primaryS * 0.7, 0.2, 0.55), between(shift, 0.78, 0.9)),
     accent: hsl(accent.h, clamp(accent.s * 1.2, 0.45, 0.8), clamp(accent.l, 0.55, 0.7)),
   };
 }

@@ -1,5 +1,5 @@
 import type { Quest } from '../quests/questSchemas';
-import type { Rarity } from '../creatures/creatureSchemas';
+import type { Creature, Rarity } from '../creatures/creatureSchemas';
 
 export const JUDGE_SYSTEM = `You are the judge and creature maker for Side Quest, a casual outdoor exploration game.
 Judge generously: ask whether the photo reasonably matches the spirit of the quest, not whether it proves anything. When unsure, lean toward passing. A blurry or partial match still counts.
@@ -9,7 +9,14 @@ export const JUDGE_SHAPE =
   'passed (boolean), confidence ("low"|"medium"|"high"), reason (one sentence), observations (2-4 short phrases), creature (null or {name, species, description, body, eyeStyle, accessory})';
 
 /** One call covers validation, observations and the creature, so the image is encoded once. */
-export function judgePrompt(quest: Pick<Quest, 'title' | 'description' | 'validationHint'>, rarity: Rarity): string {
+export function judgePrompt(
+  quest: Pick<Quest, 'title' | 'description' | 'validationHint'>,
+  rarity: Rarity,
+  recent: Pick<Creature, 'body' | 'eyeStyle' | 'accessory'>[] = [],
+): string {
+  const avoid = recent.length
+    ? `\nRecent creatures were ${recent.map((r) => `${r.body}/${r.eyeStyle}/${r.accessory}`).join(', ')} (body/eyeStyle/accessory). Pick a different combination.`
+    : '';
   return `Quest: "${quest.title}". ${quest.description}
 What counts: ${quest.validationHint}
 
@@ -28,5 +35,5 @@ Look at the photo, then return JSON with exactly these keys:
     "accessory": "leaf" | "flower" | "twig" | "mushroom" | "stone" | "none"
   }
 }
-The creature is ${rarity}. Base it on what is really in the photo.`;
+The creature is ${rarity}. Base it on what is really in the photo.${avoid}`;
 }

@@ -1,8 +1,8 @@
 import { newId } from '../../lib/random';
-import { saveCreature, saveQuest, setSetting } from '../../lib/db/database';
+import { recentCreatureTraits, saveCreature, saveQuest, setSetting } from '../../lib/db/database';
 import type { Quest } from '../quests/questSchemas';
 import type { Creature, Judgement, Palette, Rarity } from './creatureSchemas';
-import { localCreature } from './hatch';
+import { avoidRepeat, localCreature, rollLook } from './hatch';
 
 export interface HatchInput {
   quest: Quest;
@@ -17,7 +17,11 @@ export interface HatchInput {
 
 /** Builds the creature (Gemma's traits, or the local generator if they were unusable), saves it, closes the quest. */
 export async function hatchCreature({ quest, photo, seed, rarity, palette, judgement, closeQuest = true }: HatchInput): Promise<Creature> {
-  const traits = judgement.creature ?? localCreature(seed, judgement.observations);
+  const traits = avoidRepeat(
+    judgement.creature ?? localCreature(seed, judgement.observations),
+    await recentCreatureTraits(),
+    seed,
+  );
   const photoId = newId();
   const creature: Creature = {
     ...traits,
@@ -25,6 +29,7 @@ export async function hatchCreature({ quest, photo, seed, rarity, palette, judge
     rarity,
     palette,
     seed,
+    ...rollLook(seed),
     questId: quest.id,
     questTitle: quest.title,
     observations: judgement.observations,

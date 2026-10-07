@@ -21,6 +21,8 @@ export function smoothClosedPath(points: Point[]): string {
 
 export interface BodyShape {
   path: string;
+  /** Outline points the path runs through, for anchoring ears and tails. */
+  points: Point[];
   rx: number;
   ry: number;
   top: number;
@@ -87,7 +89,18 @@ export function bodyShape(body: CreatureBody, seed: number): BodyShape {
   }
 
   const ys = points.map((p) => p[1]);
-  return { path: smoothClosedPath(points), rx, ry, top: Math.min(...ys), bottom: Math.max(...ys) };
+  return { path: smoothClosedPath(points), points, rx, ry, top: Math.min(...ys), bottom: Math.max(...ys) };
+}
+
+/** The outline point closest to a target, so parts sit on the body whatever its shape. */
+export function nearestPoint(points: Point[], [tx, ty]: Point): Point {
+  let best = points[0];
+  let bestD = Infinity;
+  for (const p of points) {
+    const d = (p[0] - tx) ** 2 + (p[1] - ty) ** 2;
+    if (d < bestD) [best, bestD] = [p, d];
+  }
+  return best;
 }
 
 /** Four-point sparkle centered on (x, y). */

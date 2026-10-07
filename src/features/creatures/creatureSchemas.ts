@@ -4,11 +4,16 @@ export const BODIES = ['blob', 'round', 'sprout', 'pebble', 'fuzzy', 'droplet'] 
 export const EYES = ['dot', 'wide', 'sleepy', 'sparkle'] as const;
 export const ACCESSORIES = ['leaf', 'flower', 'twig', 'mushroom', 'stone', 'none'] as const;
 export const RARITIES = ['common', 'uncommon', 'rare'] as const;
+/** App-rolled from the seed, never asked of Gemma. */
+export const PATTERNS = ['spots', 'stripes', 'freckles', 'patches', 'plain'] as const;
+export const EXTRAS = ['ears', 'horns', 'tail', 'none'] as const;
 
 export type CreatureBody = (typeof BODIES)[number];
 export type CreatureEyes = (typeof EYES)[number];
 export type CreatureAccessory = (typeof ACCESSORIES)[number];
 export type Rarity = (typeof RARITIES)[number];
+export type CreaturePattern = (typeof PATTERNS)[number];
+export type CreatureExtra = (typeof EXTRAS)[number];
 
 /** Traits Gemma writes. Enum slips fall back to a default instead of losing the creature. */
 export const creatureTraitsSchema = z.object({
@@ -47,6 +52,9 @@ export interface Creature extends CreatureTraits {
   rarity: Rarity;
   palette: Palette;
   seed: number;
+  /** Missing on creatures hatched before patterns existed; those keep their original look. */
+  pattern?: CreaturePattern;
+  extra?: CreatureExtra;
   questId: string;
   questTitle: string;
   observations: string[];

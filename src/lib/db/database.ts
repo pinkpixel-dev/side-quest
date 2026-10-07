@@ -104,6 +104,11 @@ export async function allCreatures(): Promise<Creature[]> {
   return (await (await db()).getAllFromIndex('creatures', 'discoveredAt')).reverse();
 }
 
+/** Body / eyes / accessory of the newest few creatures, so new ones can steer away from them. */
+export async function recentCreatureTraits(limit = 5): Promise<Pick<Creature, 'body' | 'eyeStyle' | 'accessory'>[]> {
+  return (await allCreatures()).slice(0, limit).map(({ body, eyeStyle, accessory }) => ({ body, eyeStyle, accessory }));
+}
+
 export async function getPhoto(id: string): Promise<StoredPhoto | undefined> {
   const row = await (await db()).get('photos', id);
   return row && { ...row, blob: fromBytes(row.blob) };
