@@ -1,0 +1,169 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Surfaces: dark charcoal with a faint moss tint. */
+  --color-ink: oklch(0.205 0.012 150);
+  --color-ink-2: oklch(0.245 0.014 150);
+  --color-ink-3: oklch(0.33 0.016 150);
+  --color-snow: oklch(0.96 0.008 95);
+  --color-fog: oklch(0.74 0.015 120);
+
+  /* Field journal paper for quest and creature cards. */
+  --color-paper: oklch(0.94 0.028 95);
+  --color-paper-2: oklch(0.885 0.035 92);
+  --color-bark: oklch(0.29 0.03 120);
+  --color-bark-2: oklch(0.47 0.03 115);
+
+  /* Accents: mossy lime, plus a small amount of pink. */
+  --color-moss: oklch(0.86 0.17 128);
+  --color-moss-2: oklch(0.79 0.17 128);
+  --color-moss-ink: oklch(0.24 0.045 130);
+  --color-blush: oklch(0.8 0.1 5);
+  --color-blush-ink: oklch(0.3 0.06 5);
+
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, sans-serif;
+  --font-sans: 'Geist', ui-sans-serif, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-ink text-snow font-sans antialiased;
+    min-height: 100dvh;
+    /* Faint topo-map dots, so the background isn't a flat slab. */
+    background-image: radial-gradient(oklch(0.3 0.016 150 / 0.55) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-moss);
+    outline-offset: 3px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+}
+
+/* Dotted journal paper. */
+.paper {
+  @apply bg-paper text-bark;
+  background-image: radial-gradient(oklch(0.82 0.03 95) 1px, transparent 1.2px);
+  background-size: 14px 14px;
+}
+
+/* --- creature motion -------------------------------------------------------- */
+
+@keyframes bob {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-7deg);
+  }
+  75% {
+    transform: rotate(7deg);
+  }
+}
+
+@keyframes egg-out {
+  0%,
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes twinkle {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+
+.anim-bob {
+  animation: bob 2.6s ease-in-out infinite;
+}
+.anim-wobble {
+  transform-origin: 50% 85%;
+  animation: wobble 0.9s ease-in-out infinite;
+}
+.anim-egg-out {
+  transform-origin: 50% 70%;
+  animation:
+    wobble 0.35s ease-in-out 3,
+    egg-out 1.2s var(--ease-out-soft) forwards;
+}
+.anim-pop-in {
+  animation: pop-in 0.6s var(--ease-out-soft) 1s both;
+}
+.anim-rise {
+  animation: rise 0.45s var(--ease-out-soft) both;
+}
+.anim-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: twinkle 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-bob,
+  .anim-wobble,
+  .anim-twinkle {
+    animation: none;
+  }
+  .anim-egg-out {
+    animation: egg-out 0.01s 0.2s forwards;
+  }
+  .anim-pop-in,
+  .anim-rise {
+    animation-duration: 0.01s;
+    animation-delay: 0.2s;
+  }
+}

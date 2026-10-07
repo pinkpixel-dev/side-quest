@@ -1,5 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import type { Plugin } from 'vite';
 
 /**
@@ -14,14 +16,30 @@ const dropOrtWasm = (): Plugin => ({
   },
 });
 
+/** Vite only serves the model test page at /spike/ with the slash. */
+const spikeRedirect = (): Plugin => ({
+  name: 'spike-redirect',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url?.split('?')[0] !== '/spike') return next();
+      res.statusCode = 302;
+      res.setHeader('Location', '/spike/');
+      res.end();
+    });
+  },
+});
+
 export default defineConfig({
-  plugins: [dropOrtWasm()],
+  plugins: [react(), tailwindcss(), dropOrtWasm(), spikeRedirect()],
   worker: { format: 'es', plugins: () => [dropOrtWasm()] },
   // Phones reach the dev server through `npm run tunnel` (cloudflared quick tunnel).
   server: { allowedHosts: ['.trycloudflare.com'] },
   build: {
     rollupOptions: {
-      input: { spike: resolve(import.meta.dirname, 'spike/index.html') },
+      input: {
+        app: resolve(import.meta.dirname, 'index.html'),
+        spike: resolve(import.meta.dirname, 'spike/index.html'),
+      },
     },
   },
   test: { environment: 'node' },

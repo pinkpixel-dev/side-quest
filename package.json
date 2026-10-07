@@ -11,9 +11,20 @@
     "tunnel": "cloudflared tunnel --url http://127.0.0.1:5173"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.3.1"
+    "@huggingface/transformers": "^4.3.1",
+    "idb": "^8.0.4",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "fake-indexeddb": "^6.2.5",
+    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.3",
     "vitest": "^5.0.3"

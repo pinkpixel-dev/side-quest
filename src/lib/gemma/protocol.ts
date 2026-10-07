@@ -8,6 +8,8 @@ export interface GenerateRequest {
   image?: Blob;
   imageBudget?: number;
   maxTokens: number;
+  /** Sample with Gemma's recommended settings instead of greedy decoding (for variety). */
+  sample?: boolean;
 }
 
 export interface GenerateStats {

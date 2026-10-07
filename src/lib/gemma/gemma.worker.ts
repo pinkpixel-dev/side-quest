@@ -102,7 +102,14 @@ async function generate(req: GenerateRequest) {
     },
   });
 
-  await model.generate({ ...inputs, max_new_tokens: req.maxTokens, do_sample: false, streamer });
+  await model.generate({
+    ...inputs,
+    max_new_tokens: req.maxTokens,
+    do_sample: !!req.sample,
+    // Gemma 4's recommended sampling settings, from the model card.
+    ...(req.sample ? { temperature: 1.0, top_p: 0.95, top_k: 64 } : {}),
+    streamer,
+  });
   const end = performance.now();
   const genSeconds = firstAt ? (end - firstAt) / 1000 : 0;
   post({
