@@ -23,12 +23,27 @@ export interface LocalFind {
   seen: boolean;
 }
 
+/**
+ * Photos are stored as raw bytes, not Blobs: iOS Safari has a history of refusing to put
+ * Blobs into IndexedDB. Older records may still hold a Blob, so reading accepts both.
+ */
+interface StoredBytes {
+  bytes: ArrayBuffer;
+  type: string;
+}
+type PhotoData = Blob | StoredBytes;
+
+const toBytes = async (blob: Blob): Promise<StoredBytes> => ({ bytes: await blob.arrayBuffer(), type: blob.type });
+const fromBytes = (data: PhotoData): Blob => (data instanceof Blob ? data : new Blob([data.bytes], { type: data.type }));
+
+type Row<T, K extends keyof T> = Omit<T, K> & Record<K, PhotoData>;
+
 interface SideQuestDB extends DBSchema {
   quests: { key: string; value: Quest; indexes: { createdAt: number } };
   creatures: { key: string; value: Creature; indexes: { discoveredAt: number } };
-  photos: { key: string; value: StoredPhoto };
+  photos: { key: string; value: Row<StoredPhoto, 'blob'> };
   settings: { key: string; value: unknown };
-  finds: { key: string; value: LocalFind };
+  finds: { key: string; value: Row<LocalFind, 'photo'> };
 }
 
 let dbPromise: Promise<IDBPDatabase<SideQuestDB>> | null = null;
@@ -72,8 +87,10 @@ export async function recentQuests(limit = 12): Promise<Quest[]> {
 // --- creatures ------------------------------------------------------------------
 
 export async function saveCreature(creature: Creature, photo?: StoredPhoto): Promise<void> {
+  // Read the bytes before opening the transaction: IndexedDB transactions close across unrelated awaits.
+  const photoRow = photo && { ...photo, blob: await toBytes(photo.blob) };
   const tx = (await db()).transaction(['creatures', 'photos'], 'readwrite');
-  if (photo) await tx.objectStore('photos').put(photo);
+  if (photoRow) await tx.objectStore('photos').put(photoRow);
   await tx.objectStore('creatures').put(creature);
   await tx.done;
 }
@@ -88,7 +105,8 @@ export async function allCreatures(): Promise<Creature[]> {
 }
 
 export async function getPhoto(id: string): Promise<StoredPhoto | undefined> {
-  return (await db()).get('photos', id);
+  const row = await (await db()).get('photos', id);
+  return row && { ...row, blob: fromBytes(row.blob) };
 }
 
 // --- settings -------------------------------------------------------------------
@@ -104,9 +122,10 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
 // --- field finds ----------------------------------------------------------------
 
 export async function saveFind(find: LocalFind): Promise<void> {
-  await (await db()).put('finds', find);
+  const row = { ...find, photo: await toBytes(find.photo) };
+  await (await db()).put('finds', row);
 }
 
 export async function allFinds(): Promise<LocalFind[]> {
-  return (await db()).getAll('finds');
+  return (await (await db()).getAll('finds')).map((row) => ({ ...row, photo: fromBytes(row.photo) }));
 }

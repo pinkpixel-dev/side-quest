@@ -68,7 +68,14 @@ export function ProofScreen() {
   /** Field mode: queue the photo for the home base and get back outside. */
   const sendHome = async () => {
     if (!quest || !photo) return;
-    await submitFind(quest, photo.blob);
+    setPickError(null);
+    try {
+      await submitFind(quest, photo.blob);
+    } catch (err) {
+      console.error('Saving the find failed', err);
+      setPickError(`Couldn't save this find on your phone: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
+      return;
+    }
     setPhase({ kind: 'sent' });
     sync();
   };
