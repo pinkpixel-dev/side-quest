@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Quest } from '../../features/quests/questSchemas';
 import type { Creature } from '../../features/creatures/creatureSchemas';
+import type { Hunt } from '../../features/hunts/huntSchemas';
 import type { FindStatus } from '../home/protocol';
 
 export interface StoredPhoto {
@@ -44,12 +45,13 @@ interface SideQuestDB extends DBSchema {
   photos: { key: string; value: Row<StoredPhoto, 'blob'> };
   settings: { key: string; value: unknown };
   finds: { key: string; value: Row<LocalFind, 'photo'> };
+  hunts: { key: string; value: Hunt };
 }
 
 let dbPromise: Promise<IDBPDatabase<SideQuestDB>> | null = null;
 
 export function db(): Promise<IDBPDatabase<SideQuestDB>> {
-  dbPromise ??= openDB<SideQuestDB>('side-quest', 2, {
+  dbPromise ??= openDB<SideQuestDB>('side-quest', 3, {
     upgrade(d, oldVersion) {
       if (oldVersion < 1) {
         d.createObjectStore('quests', { keyPath: 'id' }).createIndex('createdAt', 'createdAt');
@@ -58,6 +60,7 @@ export function db(): Promise<IDBPDatabase<SideQuestDB>> {
         d.createObjectStore('settings');
       }
       if (oldVersion < 2) d.createObjectStore('finds', { keyPath: 'id' });
+      if (oldVersion < 3) d.createObjectStore('hunts', { keyPath: 'id' });
     },
   });
   return dbPromise;
@@ -109,6 +112,16 @@ export async function recentCreatureTraits(limit = 5): Promise<Pick<Creature, 'b
   return (await allCreatures()).slice(0, limit).map(({ body, eyeStyle, accessory }) => ({ body, eyeStyle, accessory }));
 }
 
+/** A photo on its own, e.g. a hunt snap that isn't attached to a creature (yet). */
+export async function savePhoto(photo: StoredPhoto): Promise<void> {
+  const row = { ...photo, blob: await toBytes(photo.blob) };
+  await (await db()).put('photos', row);
+}
+
+export async function deletePhoto(id: string): Promise<void> {
+  await (await db()).delete('photos', id);
+}
+
 export async function getPhoto(id: string): Promise<StoredPhoto | undefined> {
   const row = await (await db()).get('photos', id);
   return row && { ...row, blob: fromBytes(row.blob) };
@@ -133,4 +146,18 @@ export async function saveFind(find: LocalFind): Promise<void> {
 
 export async function allFinds(): Promise<LocalFind[]> {
   return (await (await db()).getAll('finds')).map((row) => ({ ...row, photo: fromBytes(row.photo) }));
+}
+
+// --- hunts ----------------------------------------------------------------------
+
+export async function saveHunt(hunt: Hunt): Promise<void> {
+  await (await db()).put('hunts', hunt);
+}
+
+export async function getHunt(id: string): Promise<Hunt | undefined> {
+  return (await db()).get('hunts', id);
+}
+
+export async function allHunts(): Promise<Hunt[]> {
+  return (await db()).getAll('hunts');
 }

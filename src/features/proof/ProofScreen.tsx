@@ -10,7 +10,8 @@ import { navigate } from '../../app/router';
 import { preparePhoto, type PreparedImage } from '../../lib/images/preprocess';
 import { hatchCreature } from '../creatures/creatureService';
 import { Egg } from '../creatures/Egg';
-import { startNewQuest } from '../quests/questService';
+import { loadContext } from '../quests/contextStore';
+import { abandonQuest, startNewQuest } from '../quests/questService';
 import { useActiveQuest } from '../quests/useActiveQuest';
 import { judgePhoto } from './judgeService';
 import { PhotoPicker } from './PhotoPicker';
@@ -27,7 +28,6 @@ export function ProofScreen() {
   const { client, state, supported } = useGemma();
   const { role, pairing, sync } = useHomeBase();
   const field = role === 'field';
-  const fromHome = field && pairing ? () => fieldApi(pairing).nextQuest() : undefined;
   const { quest } = useActiveQuest();
   const [phase, setPhase] = useState<Phase>({ kind: 'pick' });
   const [photo, setPhoto] = useState<(PreparedImage & { url: string }) | null>(null);
@@ -81,7 +81,15 @@ export function ProofScreen() {
   };
 
   const newQuest = async () => {
-    await startNewQuest(client, phase.kind === 'sent' ? undefined : (quest ?? undefined), fromHome);
+    const previous = phase.kind === 'sent' ? undefined : (quest ?? undefined);
+    const { context } = await loadContext();
+    if (context) {
+      const fromHome = field && pairing ? () => fieldApi(pairing).nextQuest(context) : undefined;
+      await startNewQuest(client, previous, fromHome, context);
+    } else if (previous) {
+      // Weather is out of date: the quest screen asks again before writing the next one.
+      await abandonQuest(previous);
+    }
     navigate('/quest', { replace: true });
   };
 

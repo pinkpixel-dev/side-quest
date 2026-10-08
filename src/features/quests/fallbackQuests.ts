@@ -4,7 +4,14 @@ import type { QuestDraft } from './questSchemas';
  * Hand-written quests. Used while Gemma loads, when generation fails, in field mode
  * when the phone is offline, and as style examples in the quest prompt.
  */
-export const FALLBACK_QUESTS: QuestDraft[] = [
+export interface LibraryQuest extends QuestDraft {
+  /** Needs woods, logs, or wild growth: skipped in cities and on beaches or deserts. */
+  wild?: boolean;
+  /** Written for after dark. Night only hands these out, and day never does. */
+  night?: boolean;
+}
+
+export const FALLBACK_QUESTS: LibraryQuest[] = [
   {
     title: 'Nature Wins',
     description: 'Find somewhere a plant is growing through, around, or on something humans built.',
@@ -71,6 +78,7 @@ export const FALLBACK_QUESTS: QuestDraft[] = [
   },
   {
     title: 'Moss Hunt',
+    wild: true,
     description: 'Find moss or lichen living its best life on a rock, wall, or tree.',
     category: 'nature',
     difficulty: 'easy',
@@ -143,6 +151,7 @@ export const FALLBACK_QUESTS: QuestDraft[] = [
   },
   {
     title: 'Tiny Forest',
+    wild: true,
     description: 'Find a patch of ground that looks like a forest if you shrink yourself down.',
     category: 'observation',
     difficulty: 'medium',
@@ -151,6 +160,7 @@ export const FALLBACK_QUESTS: QuestDraft[] = [
   },
   {
     title: 'Mushroom Moment',
+    wild: true,
     description: 'Find a mushroom or fungus. Look only, no touching.',
     category: 'nature',
     difficulty: 'medium',
@@ -167,6 +177,7 @@ export const FALLBACK_QUESTS: QuestDraft[] = [
   },
   {
     title: 'Old Timer',
+    wild: true,
     description: 'Find the oldest-looking tree, stump, or root you can.',
     category: 'nature',
     difficulty: 'easy',
@@ -204,5 +215,100 @@ export const FALLBACK_QUESTS: QuestDraft[] = [
     difficulty: 'medium',
     estimatedMinutes: 20,
     validationHint: 'Dandelion fluff, maple wings, burrs, pods, or other seeds and seed heads.',
+  },
+  {
+    title: 'Puddle Lights',
+    description: 'Find a light reflected in something wet or shiny.',
+    category: 'observation',
+    difficulty: 'easy',
+    estimatedMinutes: 10,
+    validationHint: 'A reflection of a light on a wet, glossy, or glass surface.',
+    night: true,
+  },
+  {
+    title: 'Moon Check',
+    description: 'Find the moon, or the brightest thing in the night sky you can see.',
+    category: 'observation',
+    difficulty: 'easy',
+    estimatedMinutes: 5,
+    validationHint: 'The moon or a bright point of light in a dark sky.',
+    night: true,
+  },
+  {
+    title: 'Streetlight Shadow',
+    description: 'Find a plant casting a shadow under a streetlight or porch light.',
+    category: 'pattern',
+    difficulty: 'easy',
+    estimatedMinutes: 10,
+    validationHint: 'A clear shadow of leaves or branches on the ground or a wall, lit by artificial light.',
+    night: true,
+  },
+  {
+    title: 'Glow Hunt',
+    description: 'Find something that glows a color other than white or yellow.',
+    category: 'color',
+    difficulty: 'easy',
+    estimatedMinutes: 10,
+    validationHint: 'A colored light, sign, or lit-up object in the dark.',
+    night: true,
+  },
+  {
+    title: 'Night Shift',
+    description: 'Find a plant or flower that looks totally different under a light at night.',
+    category: 'nature',
+    difficulty: 'medium',
+    estimatedMinutes: 15,
+    validationHint: 'A plant lit by artificial light against a dark background.',
+    night: true,
+  },
+  {
+    title: 'Window Watch',
+    description: 'From a window or doorway, find something outside that is only visible because it is lit up.',
+    category: 'urban-nature',
+    difficulty: 'easy',
+    estimatedMinutes: 5,
+    validationHint: 'A view of a dark outdoor scene with one clearly lit object or area.',
+    night: true,
+  },
+  {
+    title: 'Feathered Neighbor',
+    description: 'Spot a bird in the middle of doing something: hopping, singing, preening, or snacking.',
+    category: 'wildlife',
+    difficulty: 'easy',
+    estimatedMinutes: 15,
+    validationHint: 'A bird in frame, even small or far away, or clear signs of one like a nest or feathers.',
+  },
+  {
+    title: 'Up High',
+    description: 'Find a bird in the sky, on a wire, or at the very top of a tree.',
+    category: 'wildlife',
+    difficulty: 'medium',
+    estimatedMinutes: 15,
+    validationHint: 'A bird against the sky or perched up high, even as a small dark shape.',
+  },
+  {
+    title: 'Squirrel Business',
+    description: 'Find a squirrel or other small furry neighbor busy with its day, or the mess it left behind.',
+    category: 'wildlife',
+    difficulty: 'medium',
+    estimatedMinutes: 20,
+    validationHint: 'A small mammal, even far away, or signs like nibbled nuts, chewed cones, or a nest of leaves.',
+  },
+  {
+    title: 'Tiny Tenant',
+    description: 'Find a small creature on a flower, leaf, or wall and get a close-up without disturbing it.',
+    category: 'wildlife',
+    difficulty: 'easy',
+    estimatedMinutes: 15,
+    validationHint: 'An insect, spider, snail, or other small creature, or a web or trail it left.',
+  },
+  {
+    title: 'Porch Light Party',
+    description: 'Find moths, bugs, or a spider web gathered near an outdoor light.',
+    category: 'wildlife',
+    difficulty: 'easy',
+    estimatedMinutes: 10,
+    validationHint: 'Insects or a web near a lit lamp or window, even as small dark shapes.',
+    night: true,
   },
 ];

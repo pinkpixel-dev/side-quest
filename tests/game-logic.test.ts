@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FALLBACK_QUESTS } from '../src/features/quests/fallbackQuests';
 import { isSafeQuest, questDraftSchema } from '../src/features/quests/questSchemas';
-import { libraryQuest } from '../src/features/quests/questService';
+import { isTooSimilar, libraryQuest, pickCategory } from '../src/features/quests/questService';
+import { animalIdea, questPrompt } from '../src/features/quests/questPrompts';
+import type { QuestContext } from '../src/features/quests/questContext';
 import { judgementSchema } from '../src/features/creatures/creatureSchemas';
 import { avoidRepeat, localCreature, paletteFromPixels, rollLook, rollRarity } from '../src/features/creatures/hatch';
 import { judgePrompt } from '../src/features/proof/judgePrompts';
@@ -9,13 +11,13 @@ import { parseStructured } from '../src/lib/ai/structured';
 import { seededRandom } from '../src/lib/random';
 
 describe('quests', () => {
-  it('ships 25 valid, safe library quests with unique titles', () => {
-    expect(FALLBACK_QUESTS).toHaveLength(25);
+  it('ships 36 valid, safe library quests with unique titles', () => {
+    expect(FALLBACK_QUESTS).toHaveLength(36);
     for (const q of FALLBACK_QUESTS) {
       expect(questDraftSchema.safeParse(q).success, q.title).toBe(true);
       expect(isSafeQuest(q), q.title).toBe(true);
     }
-    expect(new Set(FALLBACK_QUESTS.map((q) => q.title)).size).toBe(25);
+    expect(new Set(FALLBACK_QUESTS.map((q) => q.title)).size).toBe(36);
   });
 
   it('rejects unsafe generated quests', () => {
@@ -47,6 +49,61 @@ describe('quests', () => {
   it('avoids recently played library quests', () => {
     const recent = FALLBACK_QUESTS.slice(1).map((q) => q.title);
     expect(libraryQuest(recent).title).toBe(FALLBACK_QUESTS[0].title);
+  });
+
+  const city: QuestContext = { setting: 'city', weather: 'cloudy', season: 'autumn', time: 'afternoon' };
+
+  it('picks library quests that suit the setting and time', () => {
+    const byTitle = new Map(FALLBACK_QUESTS.map((q) => [q.title, q]));
+    for (let i = 0; i < 200; i++) {
+      const day = byTitle.get(libraryQuest([], city).title)!;
+      expect(day.night ?? false).toBe(false);
+      expect(day.wild ?? false).toBe(false);
+      expect(byTitle.get(libraryQuest([], { ...city, time: 'night' }).title)!.night).toBe(true);
+    }
+    expect(libraryQuest([], city)).not.toHaveProperty('wild');
+  });
+
+  it('never repeats any of the last three categories', () => {
+    const recent = [{ category: 'nature' }, { category: 'color' }, { category: 'texture' }] as const;
+    for (let i = 0; i < 100; i++) expect(['nature', 'color', 'texture']).not.toContain(pickCategory([...recent]));
+  });
+
+  it('spots a reworded repeat but lets a new idea through', () => {
+    const recent = [{ title: 'Nature Wins', description: 'Find somewhere a plant is growing through something humans built.' }];
+    expect(isTooSimilar({ title: 'Concrete Rebel', description: 'Find a plant growing through something that humans built.' }, recent)).toBe(true);
+    expect(isTooSimilar({ title: 'Puddle Sky', description: 'Find a puddle reflecting the clouds overhead.' }, recent)).toBe(false);
+    expect(isTooSimilar({ title: 'nature wins', description: 'Totally different words here.' }, recent)).toBe(true);
+  });
+
+  it('gives Gemma the context, recent quests, and an idea to build on', () => {
+    const prompt = questPrompt('color', [{ title: 'Moss Hunt', description: 'Find moss.' }], 'reflections', { ...city, time: 'night' });
+    expect(prompt).toContain('a city');
+    expect(prompt).toContain('It is dark out');
+    expect(prompt).toContain('- Moss Hunt: Find moss.');
+    expect(prompt).toContain('this idea: reflections');
+    expect(prompt).not.toContain('"wild"');
+  });
+
+  it('picks animal ideas that suit the setting, season, and time', () => {
+    const ideas = (ctx: QuestContext) => new Set(Array.from({ length: 300 }, () => animalIdea(ctx)));
+    const winterBeach = ideas({ setting: 'open', weather: 'sunny', season: 'winter', time: 'afternoon' });
+    expect(winterBeach).toContain('gulls or shorebirds');
+    for (const idea of winterBeach) expect(idea).not.toMatch(/squirrel|bee|ants|pigeons|farm/);
+    const night = ideas({ ...city, time: 'night', season: 'summer' });
+    expect([...night].sort()).toEqual(['a spider web lit up by a lamp', 'moths or bugs drawn to a porch light']);
+    expect(animalIdea({ ...city, time: 'night', season: 'winter' })).toBe('a spider web lit up by a lamp');
+    expect(ideas(city)).not.toContain('animal tracks pressed into snow, mud, or sand');
+  });
+
+  it('tells Gemma to accept signs of an animal on wildlife quests only', () => {
+    expect(questPrompt('wildlife', [], 'a squirrel', city)).toContain('or a clear sign of it');
+    expect(questPrompt('color', [], 'shadows', city)).not.toContain('or a clear sign of it');
+  });
+
+  it('allows night quests but not dark, lonely places', () => {
+    expect(isSafeQuest({ title: 'Moon Check', description: 'Find the moon at night from your porch.' })).toBe(true);
+    expect(isSafeQuest({ title: 'Dark Walk', description: 'Find an unlit path and follow it.' })).toBe(false);
   });
 });
 

@@ -4,6 +4,7 @@ import { Link, matchPath, usePath } from './router';
 import { HomeScreen } from '../features/quests/HomeScreen';
 import { QuestScreen } from '../features/quests/QuestScreen';
 import { ProofScreen } from '../features/proof/ProofScreen';
+import { HuntScreen } from '../features/hunts/HuntScreen';
 import { UnlockScreen } from '../features/creatures/UnlockScreen';
 import { CollectionScreen } from '../features/collection/CollectionScreen';
 import { CreatureDetail } from '../features/collection/CreatureDetail';
@@ -14,7 +15,7 @@ import { FieldNotices } from '../features/field/FieldNotices';
 import { useHomeBase } from './homebase';
 
 const NAV = [
-  { href: '/quest', label: 'Quest', icon: Compass, active: ['/quest', '/proof', '/unlock'] },
+  { href: '/quest', label: 'Quest', icon: Compass, active: ['/quest', '/hunt', '/proof', '/unlock'] },
   { href: '/collection', label: 'Creatures', icon: LayoutGrid, active: ['/collection', '/creature'] },
   { href: '/about', label: 'About', icon: Info, active: ['/about'] },
 ];
@@ -25,6 +26,8 @@ function route(path: string): ReactNode {
   if (path === '/') return <HomeScreen />;
   if (path === '/quest') return <QuestScreen />;
   if (path === '/proof') return <ProofScreen />;
+  if (path === '/hunt') return <HuntScreen />;
+  if ((p = matchPath('/hunt/:id', path))) return <HuntScreen key={p.id} id={p.id} />;
   if (path === '/collection') return <CollectionScreen />;
   if (path === '/about') return <AboutScreen />;
   if (path === '/base') return <BaseScreen />;

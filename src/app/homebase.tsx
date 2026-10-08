@@ -1,8 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { allFinds, recentQuests, type LocalFind } from '../lib/db/database';
+import { allFinds, allHunts, type LocalFind } from '../lib/db/database';
 import { baseApi, fieldApi, findHomeServer, loadPairing, savePairing, type Pairing } from '../lib/home/client';
 import type { BaseSession, HelloResponse } from '../lib/home/protocol';
-import { processFind, writeQuestForPhone } from '../features/base/baseWorker';
+import { processFind, processHunt, writeHuntForPhone, writeQuestForPhone } from '../features/base/baseWorker';
+import { syncHunts } from '../features/hunts/huntSync';
+import type { Hunt } from '../features/hunts/huntSchemas';
 import { syncFinds } from '../features/field/fieldSync';
 import { useGemma } from './gemma';
 
@@ -26,6 +28,8 @@ interface HomeBaseValue {
   /** null until the first check finishes. */
   reachable: boolean | null;
   finds: LocalFind[];
+  /** Field hunts that are on their way home or back with news. */
+  hunts: Hunt[];
   sync(): Promise<void>;
   pair(p: Pairing): Promise<void>;
   unpair(): Promise<void>;
@@ -47,6 +51,7 @@ export function HomeBaseProvider({ children }: { children: ReactNode }) {
   const [hello, setHello] = useState<HelloResponse | null>(null);
   const [reachable, setReachable] = useState<boolean | null>(null);
   const [finds, setFinds] = useState<LocalFind[]>([]);
+  const [hunts, setHunts] = useState<Hunt[]>([]);
   const [baseOrigin, setBaseOrigin] = useState<string | null>(null);
   const [session, setSession] = useState<BaseSession | null>(null);
   const [waiting, setWaiting] = useState(0);
@@ -80,11 +85,13 @@ export function HomeBaseProvider({ children }: { children: ReactNode }) {
       setHello(await fieldApi(pairing).hello());
       setReachable(true);
       await syncFinds(pairing);
+      await syncHunts(pairing);
     } catch {
       setReachable(false);
     } finally {
       busy.current = false;
       setFinds(await allFinds());
+      setHunts((await allHunts()).filter((h) => h.status === 'queued' || h.status === 'waiting' || h.seen === false));
     }
   }, [pairing]);
 
@@ -121,9 +128,10 @@ export function HomeBaseProvider({ children }: { children: ReactNode }) {
         }
         const jobs = await api.checkIn(gemmaReady);
         if (!jobs) return;
-        setWaiting(jobs.waiting.length);
+        setWaiting(jobs.waiting.length + jobs.huntsWaiting.length);
         if (!gemmaReady) return;
         const next = jobs.waiting[0];
+        const hunt = jobs.huntsWaiting[0];
         if (next) {
           setBusyWith(next.quest.title);
           const result = await processFind(client, api, next);
@@ -134,11 +142,23 @@ export function HomeBaseProvider({ children }: { children: ReactNode }) {
                 ? `"${next.quest.title}" was not quite it`
                 : `Gemma got confused by a "${next.quest.title}" photo`,
           );
+        } else if (hunt) {
+          setBusyWith(`the "${hunt.title}" hunt`);
+          const result = await processHunt(client, api, hunt);
+          const found = result.items.filter((i) => i.found).length;
+          log(
+            result.creature
+              ? `${result.creature.name} hatched from the "${hunt.title}" hunt (${found}/${hunt.items.length} found)`
+              : `"${hunt.title}" hunt checked: ${found}/${hunt.items.length} found`,
+          );
         } else if (jobs.questsReady < jobs.questsWanted) {
           setBusyWith('a new quest');
-          const titles = (await recentQuests(20)).map((q) => q.title);
-          const title = await writeQuestForPhone(client, api, titles);
+          const title = await writeQuestForPhone(client, api, jobs.context);
           if (title) log(`Wrote a quest for later: "${title}"`);
+        } else if (jobs.huntsReady < jobs.huntsWanted) {
+          setBusyWith('a new hunt list');
+          const title = await writeHuntForPhone(client, api, jobs.context);
+          if (title) log(`Wrote a hunt for later: "${title}"`);
         }
       } catch (err) {
         console.warn('Home base check-in failed', err);
@@ -174,6 +194,7 @@ export function HomeBaseProvider({ children }: { children: ReactNode }) {
         hello,
         reachable,
         finds,
+        hunts,
         sync,
         pair,
         unpair,

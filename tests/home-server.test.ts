@@ -95,4 +95,22 @@ describe('find relay', () => {
     expect((await first.json()).title).toBe(FALLBACK_QUESTS[1].title);
     expect((await fetch(`${base}/api/quests/next`, { method: 'POST', headers: paired() })).status).toBe(204);
   });
+
+  it('drops pre-written quests when the phone says it is somewhere new', async () => {
+    const rainy = { setting: 'city', weather: 'rainy', season: 'autumn', time: 'evening' };
+    const night = { ...rainy, time: 'night' };
+    const next = (context: object) =>
+      fetch(`${base}/api/quests/next`, { method: 'POST', headers: paired(), body: JSON.stringify({ context }) });
+    const add = (q: object, context: object) =>
+      fetch(`${base}/api/quests`, { method: 'POST', body: JSON.stringify({ quest: q, context }) });
+
+    expect((await next(rainy)).status).toBe(204);
+    await add(FALLBACK_QUESTS[1], rainy);
+    await add(FALLBACK_QUESTS[2], night); // written for a context the phone isn't in: ignored
+    const jobs = await (await fetch(`${base}/api/base/checkin`, { method: 'POST', body: '{"gemmaReady":true}' })).json();
+    expect(jobs).toMatchObject({ questsReady: 1, context: rainy });
+
+    expect((await next(night)).status).toBe(204); // context changed, so the rainy-evening quest is gone
+    expect(store.questsReady).toBe(0);
+  });
 });

@@ -10,7 +10,11 @@ import type {
   FindResult,
   FindUpload,
   HelloResponse,
+  HuntResult,
+  HuntUpload,
 } from '../src/lib/home/protocol.ts';
+import type { HuntDraft } from '../src/features/hunts/huntSchemas.ts';
+import { isQuestContext } from '../src/features/quests/questContext.ts';
 import type { Store } from './store.ts';
 
 export interface HomeOptions {
@@ -21,9 +25,14 @@ export interface HomeOptions {
   session: () => Omit<BaseSession, 'token'>;
 }
 
-const MAX_BODY = 8 * 1024 * 1024;
+// A full hunt is ten photos in one request.
+const MAX_BODY = 16 * 1024 * 1024;
 const BASE_ONLINE_MS = 20_000;
 const QUESTS_WANTED = 3;
+const HUNTS_WANTED = 1;
+const MAX_HUNT_ITEMS = 12;
+const JPEG_DATA_URL = /^data:image\/jpeg;base64,(.+)$/;
+const SAFE_ID = /^[\w-]+$/;
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -90,10 +99,33 @@ export function createHomeServer({ store, staticDir, session }: HomeOptions): Se
           waiting: store.waitingFinds(),
           questsReady: store.questsReady,
           questsWanted: QUESTS_WANTED,
+          context: store.context,
+          huntsWaiting: store.waitingHunts(),
+          huntsReady: store.huntsReady,
+          huntsWanted: HUNTS_WANTED,
         } satisfies BaseJobs);
       }
+      if (path === '/api/base/hunt-pool' && method === 'POST') {
+        const body = await readJson<{ hunt: HuntDraft; context?: unknown }>(req);
+        if (!body.hunt?.title || !Array.isArray(body.hunt.items)) return send(res, 400, { error: 'Bad hunt.' });
+        store.addHuntDraft(body.hunt, isQuestContext(body.context) ? body.context : null);
+        return send(res, 204);
+      }
+      const huntPhoto = /^\/api\/base\/hunts\/([\w-]+)\/photo\/([\w-]+)$/.exec(path);
+      if (huntPhoto && method === 'GET') {
+        const file = store.huntPhotoPath(huntPhoto[1], huntPhoto[2]);
+        if (!existsSync(file)) return send(res, 404);
+        res.writeHead(200, { 'content-type': 'image/jpeg' });
+        return void createReadStream(file).pipe(res);
+      }
+      const huntResult = /^\/api\/base\/hunts\/([\w-]+)\/result$/.exec(path);
+      if (huntResult && method === 'POST') {
+        const hunt = store.resolveHunt(huntResult[1], await readJson<HuntResult>(req));
+        return hunt ? send(res, 200, hunt) : send(res, 404);
+      }
       if (path === '/api/quests' && method === 'POST') {
-        store.addQuest((await readJson<{ quest: Find['quest'] }>(req)).quest);
+        const body = await readJson<{ quest: Find['quest']; context?: unknown }>(req);
+        store.addQuest(body.quest, isQuestContext(body.context) ? body.context : null);
         return send(res, 204);
       }
       const findId = path.split('/')[3];
@@ -123,13 +155,16 @@ export function createHomeServer({ store, staticDir, session }: HomeOptions): Se
       } satisfies HelloResponse);
     }
     if (path === '/api/quests/next' && method === 'POST') {
+      // Older phones send no body; that's fine, they just don't update the context.
+      const { context } = await readJson<{ context?: unknown }>(req).catch(() => ({ context: undefined }));
+      if (isQuestContext(context)) store.setContext(context);
       const quest = store.takeQuest();
       return quest ? send(res, 200, quest) : send(res, 204);
     }
     if (path === '/api/finds' && method === 'POST') {
       const upload = await readJson<FindUpload>(req);
-      const match = /^data:image\/jpeg;base64,(.+)$/.exec(upload.photo ?? '');
-      if (!match || !/^[\w-]+$/.test(upload.id ?? '') || !upload.quest?.title) return send(res, 400, { error: 'Bad find.' });
+      const match = JPEG_DATA_URL.exec(upload.photo ?? '');
+      if (!match || !SAFE_ID.test(upload.id ?? '') || !upload.quest?.title) return send(res, 400, { error: 'Bad find.' });
       store.addFind(
         { id: upload.id, quest: upload.quest, createdAt: upload.createdAt, status: 'waiting' },
         Buffer.from(match[1], 'base64'),
@@ -139,6 +174,39 @@ export function createHomeServer({ store, staticDir, session }: HomeOptions): Se
     if (path === '/api/finds' && method === 'GET') {
       const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50);
       return send(res, 200, ids.map((id) => store.getFind(id)).filter(Boolean));
+    }
+    if (path === '/api/hunts/next' && method === 'POST') {
+      const { context } = await readJson<{ context?: unknown }>(req).catch(() => ({ context: undefined }));
+      if (isQuestContext(context)) store.setContext(context);
+      const hunt = store.takeHunt();
+      return hunt ? send(res, 200, hunt) : send(res, 204);
+    }
+    if (path === '/api/hunts' && method === 'POST') {
+      const upload = await readJson<HuntUpload>(req);
+      const items = Array.isArray(upload.items) ? upload.items : [];
+      const photos = new Map<string, Buffer>();
+      for (const item of items) {
+        const match = JPEG_DATA_URL.exec(item?.photo ?? '');
+        if (!match || !SAFE_ID.test(item.id ?? '') || typeof item.text !== 'string') break;
+        photos.set(item.id, Buffer.from(match[1], 'base64'));
+      }
+      const valid = SAFE_ID.test(upload.id ?? '') && typeof upload.title === 'string' && items.length > 0;
+      if (!valid || items.length > MAX_HUNT_ITEMS || photos.size !== items.length) return send(res, 400, { error: 'Bad hunt.' });
+      store.addHunt(
+        {
+          id: upload.id,
+          title: upload.title.slice(0, 60),
+          createdAt: upload.createdAt,
+          items: items.map(({ id, text }) => ({ id, text: text.slice(0, 80) })),
+          status: 'waiting',
+        },
+        photos,
+      );
+      return send(res, 201, store.getHunt(upload.id));
+    }
+    if (path === '/api/hunts' && method === 'GET') {
+      const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50);
+      return send(res, 200, ids.map((id) => store.getHunt(id)).filter(Boolean));
     }
     return send(res, 404);
   };

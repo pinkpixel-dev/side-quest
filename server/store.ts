@@ -2,14 +2,22 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Find } from '../src/lib/home/protocol.ts';
+import type { Find, HuntResult, HuntSubmission } from '../src/lib/home/protocol.ts';
+import type { HuntDraft } from '../src/features/hunts/huntSchemas.ts';
 import type { QuestDraft } from '../src/features/quests/questSchemas.ts';
+import { contextKey, type QuestContext } from '../src/features/quests/questContext.ts';
 
 interface State {
   token: string;
   finds: Find[];
   /** Quests Gemma wrote ahead of time, waiting for the phone to pick them up. */
   questPool: QuestDraft[];
+  /** Hunts the phone sent home. Older home.json files don't have these yet. */
+  hunts?: HuntSubmission[];
+  /** Hunt lists Gemma wrote ahead of time. */
+  huntPool?: HuntDraft[];
+  /** The phone's latest setting / weather / season / time. */
+  context?: QuestContext;
 }
 
 /** Everything lives in ~/.side-quest (or $SIDE_QUEST_HOME): photos stay on this machine. */
@@ -25,6 +33,8 @@ export class Store {
     this.state = existsSync(this.file)
       ? (JSON.parse(readFileSync(this.file, 'utf8')) as State)
       : { token: randomBytes(24).toString('base64url'), finds: [], questPool: [] };
+    this.state.hunts ??= [];
+    this.state.huntPool ??= [];
     this.save();
   }
 
@@ -72,9 +82,24 @@ export class Store {
     return this.state.questPool.length;
   }
 
-  addQuest(draft: QuestDraft): void {
+  /** Skips quests written for a context the phone has since left behind. */
+  addQuest(draft: QuestDraft, writtenFor: QuestContext | null = null): void {
+    if (this.state.context && (!writtenFor || contextKey(writtenFor) !== contextKey(this.state.context))) return;
     if (this.state.questPool.some((q) => q.title === draft.title)) return;
     this.state.questPool.push(draft);
+    this.save();
+  }
+
+  get context(): QuestContext | null {
+    return this.state.context ?? null;
+  }
+
+  /** New context from the phone. Quests written for a different one are dropped. */
+  setContext(context: QuestContext): void {
+    if (this.state.context && contextKey(this.state.context) === contextKey(context)) return;
+    this.state.context = context;
+    this.state.questPool = [];
+    this.state.huntPool = [];
     this.save();
   }
 
@@ -82,5 +107,52 @@ export class Store {
     const quest = this.state.questPool.shift();
     if (quest) this.save();
     return quest;
+  }
+
+  // --- hunts -----------------------------------------------------------------------
+
+  huntPhotoPath(huntId: string, itemId: string): string {
+    return this.photoPath(`${huntId}_${itemId}`);
+  }
+
+  /** Idempotent like addFind: a retried upload is a no-op. */
+  addHunt(hunt: HuntSubmission, photos: Map<string, Buffer>): void {
+    if (this.getHunt(hunt.id)) return;
+    for (const [itemId, jpeg] of photos) writeFileSync(this.huntPhotoPath(hunt.id, itemId), jpeg);
+    this.state.hunts!.push(hunt);
+    this.save();
+  }
+
+  getHunt(id: string): HuntSubmission | undefined {
+    return this.state.hunts!.find((h) => h.id === id);
+  }
+
+  waitingHunts(): HuntSubmission[] {
+    return this.state.hunts!.filter((h) => h.status === 'waiting');
+  }
+
+  resolveHunt(id: string, result: HuntResult): HuntSubmission | undefined {
+    const hunt = this.getHunt(id);
+    if (!hunt) return undefined;
+    Object.assign(hunt, { status: 'done', result, resolvedAt: Date.now() });
+    this.save();
+    return hunt;
+  }
+
+  get huntsReady(): number {
+    return this.state.huntPool!.length;
+  }
+
+  /** Same context rule as quests. */
+  addHuntDraft(draft: HuntDraft, writtenFor: QuestContext | null = null): void {
+    if (this.state.context && (!writtenFor || contextKey(writtenFor) !== contextKey(this.state.context))) return;
+    this.state.huntPool!.push(draft);
+    this.save();
+  }
+
+  takeHunt(): HuntDraft | undefined {
+    const draft = this.state.huntPool!.shift();
+    if (draft) this.save();
+    return draft;
   }
 }

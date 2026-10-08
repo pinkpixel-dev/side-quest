@@ -1,4 +1,5 @@
 import { getSetting, setSetting } from '../db/database';
+import type { QuestContext } from '../../features/quests/questContext';
 import {
   HOME_PORT,
   type BaseJobs,
@@ -7,6 +8,10 @@ import {
   type FindResult,
   type FindUpload,
   type HelloResponse,
+  type HuntDraft,
+  type HuntResult,
+  type HuntSubmission,
+  type HuntUpload,
   type QuestDraft,
 } from './protocol';
 
@@ -41,10 +46,18 @@ export function fieldApi({ baseUrl, token }: Pairing) {
   const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
   return {
     hello: () => request<HelloResponse>(`${baseUrl}/api/hello`, { headers }, 8_000),
-    nextQuest: () => request<QuestDraft>(`${baseUrl}/api/quests/next`, { method: 'POST', headers }, 8_000),
+    nextQuest: (context: QuestContext | null) =>
+      request<QuestDraft>(`${baseUrl}/api/quests/next`, { method: 'POST', headers, body: JSON.stringify({ context }) }, 8_000),
     upload: (find: FindUpload) =>
       request<Find>(`${baseUrl}/api/finds`, { method: 'POST', headers, body: JSON.stringify(find) }, 60_000),
     finds: (ids: string[]) => request<Find[]>(`${baseUrl}/api/finds?ids=${ids.map(encodeURIComponent).join(',')}`, { headers }),
+    nextHunt: (context: QuestContext | null) =>
+      request<HuntDraft>(`${baseUrl}/api/hunts/next`, { method: 'POST', headers, body: JSON.stringify({ context }) }, 8_000),
+    /** Ten photos in one go, so give a slow connection plenty of time. */
+    uploadHunt: (hunt: HuntUpload) =>
+      request<HuntSubmission>(`${baseUrl}/api/hunts`, { method: 'POST', headers, body: JSON.stringify(hunt) }, 180_000),
+    hunts: (ids: string[]) =>
+      request<HuntSubmission[]>(`${baseUrl}/api/hunts?ids=${ids.map(encodeURIComponent).join(',')}`, { headers }),
   };
 }
 
@@ -66,8 +79,22 @@ export function baseApi(origin: string) {
         headers: json,
         body: JSON.stringify(result),
       }),
-    addQuest: (quest: QuestDraft) =>
-      request<void>(`${origin}/api/quests`, { method: 'POST', headers: json, body: JSON.stringify({ quest }) }),
+    huntPhoto: async (huntId: string, itemId: string) => {
+      const res = await fetch(`${origin}/api/base/hunts/${encodeURIComponent(huntId)}/photo/${encodeURIComponent(itemId)}`);
+      if (!res.ok) throw new Error(`Hunt photo ${res.status}`);
+      return res.blob();
+    },
+    resolveHunt: (id: string, result: HuntResult) =>
+      request<HuntSubmission>(`${origin}/api/base/hunts/${encodeURIComponent(id)}/result`, {
+        method: 'POST',
+        headers: json,
+        body: JSON.stringify(result),
+      }),
+    addHunt: (hunt: HuntDraft, context: QuestContext | null) =>
+      request<void>(`${origin}/api/base/hunt-pool`, { method: 'POST', headers: json, body: JSON.stringify({ hunt, context }) }),
+    /** `context` is what the quest was written for; the server drops it if the phone has moved on. */
+    addQuest: (quest: QuestDraft, context: QuestContext | null) =>
+      request<void>(`${origin}/api/quests`, { method: 'POST', headers: json, body: JSON.stringify({ quest, context }) }),
   };
 }
 

@@ -37,7 +37,8 @@ const UNSAFE = [
   /\b(eat|taste|lick|chew|forage)\b/i,
   /\bstranger|ask (someone|a person)|photograph (a )?(person|people)/i,
   /\b(touch|pet|pick up|catch|chase|feed) (an? |the )?(animal|bird|squirrel|insect|bug|wildlife|snake)/i,
-  /abandoned|after dark|at night|midnight/i,
+  // Night quests are fine; dark, lonely places are not.
+  /abandoned|isolated|dark alley|unlit|pitch[- ]black/i,
   /\b(pick|collect|take home|uproot|break off)\b/i,
 ];
 
