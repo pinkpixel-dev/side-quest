@@ -16,8 +16,10 @@ import {
 } from './protocol';
 
 export interface Pairing {
+  /** '' means this same origin: the hosted site, where the session cookie does the auth. */
   baseUrl: string;
-  token: string;
+  /** Only for `npm run home`. */
+  token?: string;
 }
 
 const PAIRING_KEY = 'homePairing';
@@ -41,9 +43,10 @@ async function request<T>(url: string, init: RequestInit = {}, timeoutMs = 15_00
   return (await res.json()) as T;
 }
 
-/** The phone's side. Every call carries the pairing token. */
+/** The phone's side. Every call carries the pairing token, or the session cookie on the hosted site. */
 export function fieldApi({ baseUrl, token }: Pairing) {
-  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (token) headers.authorization = `Bearer ${token}`;
   return {
     hello: () => request<HelloResponse>(`${baseUrl}/api/hello`, { headers }, 8_000),
     nextQuest: (context: QuestContext | null) =>
@@ -61,7 +64,10 @@ export function fieldApi({ baseUrl, token }: Pairing) {
   };
 }
 
-/** The laptop tab's side. These endpoints only answer on the home computer itself. */
+/**
+ * The laptop tab's side. With `npm run home` these only answer on the home computer itself.
+ * On the hosted site, origin is '' and the session cookie decides whose finds these are.
+ */
 export function baseApi(origin: string) {
   const json = { 'content-type': 'application/json' };
   return {

@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "dev:api": "wrangler dev --port 8787",
+    "build": "tsc --noEmit && tsc -p worker && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "home": "vite build && node server/home.ts",
-    "home:dev": "node server/home.ts --no-tunnel"
+    "home:dev": "node server/home.ts --no-tunnel",
+    "db:migrate:local": "wrangler d1 migrations apply side-quest --local",
+    "db:migrate": "wrangler d1 migrations apply side-quest --remote",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",
@@ -21,6 +25,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261009.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.4",
     "@types/qrcode": "^1.5.6",
@@ -31,6 +36,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.149.0"
   }
 }

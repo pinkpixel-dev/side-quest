@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Compass, ListChecks, Radio } from 'lucide-react';
+import { Compass, ListChecks, Radio, Smartphone } from 'lucide-react';
 import { LinkButton } from '../../components/Button';
 import { ModelStatus } from '../../components/ModelStatus';
 import { Link } from '../../app/router';
@@ -40,6 +40,12 @@ export function HomeScreen() {
             <Link href="/base" className="inline-flex items-center gap-2 justify-self-start rounded-md text-moss hover:underline">
               <Radio className="size-4" aria-hidden />
               Home base is running. Pair your phone
+            </Link>
+          )}
+          {role === 'solo' && (
+            <Link href="/account" className="inline-flex items-center gap-2 justify-self-start rounded-md text-moss hover:underline">
+              <Smartphone className="size-4" aria-hidden />
+              Sign in to play with your phone
             </Link>
           )}
         </section>

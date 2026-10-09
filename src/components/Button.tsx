@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { Link } from '../app/router';
 
-type Variant = 'primary' | 'secondary' | 'paper' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'paper' | 'ghost' | 'danger';
 
 const base =
   'inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 font-semibold ' +
@@ -14,6 +14,7 @@ const variants: Record<Variant, string> = {
   secondary: 'border border-ink-3 text-snow hover:bg-ink-2 hover:border-fog/40',
   paper: 'border border-bark/20 text-bark hover:bg-paper-2',
   ghost: 'text-fog hover:text-snow hover:bg-ink-2',
+  danger: 'bg-blush text-blush-ink hover:bg-blush/85',
 };
 
 export const buttonClass = (variant: Variant = 'primary', extra = '') => `${base} ${variants[variant]} ${extra}`;

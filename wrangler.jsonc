@@ -1,0 +1,30 @@
+{
+  // The hosted site: serves the built app, and runs the Worker only for /api/*.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "side-quest",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "side-quest.pinkpixel.dev", "custom_domain": true }],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "side-quest",
+      "database_id": "9b0e584c-49a0-4de0-bd1b-362e71a337a1",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "side-quest-photos" }],
+  // GITHUB_CLIENT_ID is public. GITHUB_CLIENT_SECRET is a secret (`wrangler secret put`).
+  // Local dev overrides both in .dev.vars.
+  "vars": {
+    "APP_ORIGIN": "https://side-quest.pinkpixel.dev",
+    "GITHUB_CLIENT_ID": ""
+  },
+  "observability": { "enabled": true }
+}

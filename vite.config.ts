@@ -32,8 +32,12 @@ const spikeRedirect = (): Plugin => ({
 export default defineConfig({
   plugins: [react(), tailwindcss(), dropOrtWasm(), spikeRedirect()],
   worker: { format: 'es', plugins: () => [dropOrtWasm()] },
-  // Lets a phone reach the dev server through a cloudflared quick tunnel if needed.
-  server: { allowedHosts: ['.trycloudflare.com'] },
+  server: {
+    // Lets a phone reach the dev server through a cloudflared quick tunnel if needed.
+    allowedHosts: ['.trycloudflare.com'],
+    // The hosted API (`npm run dev:api`). Same origin as the app, so session cookies just work.
+    proxy: { '/api': 'http://127.0.0.1:8787' },
+  },
   build: {
     rollupOptions: {
       input: {

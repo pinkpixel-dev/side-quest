@@ -11,6 +11,8 @@ import { CreatureDetail } from '../features/collection/CreatureDetail';
 import { AboutScreen } from './AboutScreen';
 import { BaseScreen } from '../features/base/BaseScreen';
 import { PairScreen } from '../features/field/PairScreen';
+import { LinkScreen } from '../features/field/LinkScreen';
+import { AccountScreen } from '../features/account/AccountScreen';
 import { FieldNotices } from '../features/field/FieldNotices';
 import { useHomeBase } from './homebase';
 
@@ -32,6 +34,8 @@ function route(path: string): ReactNode {
   if (path === '/about') return <AboutScreen />;
   if (path === '/base') return <BaseScreen />;
   if (path === '/pair') return <PairScreen />;
+  if (path === '/link') return <LinkScreen />;
+  if (path === '/account') return <AccountScreen />;
   if ((p = matchPath('/unlock/:id', path))) return <UnlockScreen key={p.id} id={p.id} />;
   if ((p = matchPath('/creature/:id', path))) return <CreatureDetail key={p.id} id={p.id} />;
   return <p className="text-fog">Nothing out here. Try the quest page.</p>;
