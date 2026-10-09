@@ -47,6 +47,27 @@ describe('hunt lists', () => {
     expect(libraryItemsFor({ ...park, season: 'winter' })).not.toContain('a flower');
   });
 
+  it('keeps beach things off desert hunts and the other way round', () => {
+    const beach = libraryItemsFor({ ...park, setting: 'beach' });
+    const desert = libraryItemsFor({ ...park, setting: 'desert' });
+    expect(beach).toContain('a shell');
+    expect(beach).not.toContain('a cactus');
+    expect(desert).toContain('a cactus');
+    expect(desert).not.toContain('a shell');
+  });
+
+  it('drops poetic items Gemma could not mean literally', () => {
+    expect(cleanItems(['Cool breeze outline', 'Warm light shimmer', 'Faint moonlight streak', 'a glowing sign', 'a starfish'])).toEqual([
+      'a glowing sign',
+      'a starfish',
+    ]);
+    for (const item of HUNT_ITEMS) expect(cleanItems([item.text]), item.text).toEqual([item.text]);
+  });
+
+  it('puts the place in the hunt prompt', () => {
+    expect(huntPrompt({ ...park, setting: 'beach', place: 'Sydney' }, ['a shell'])).toContain('in or near Sydney');
+  });
+
   it('drops unsafe and duplicate items', () => {
     expect(cleanItems(['something red', 'Something Red!', 'a red thing', 'pet a squirrel', 'climb a tree'])).toEqual([
       'something red',

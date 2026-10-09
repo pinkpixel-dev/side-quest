@@ -6,12 +6,14 @@ export const HUNT_SYSTEM = `You write scavenger hunt lists for Side Quest, a gam
 Every item must:
 - be something the player could find nearby and show in a single photo
 - fit the player's setting, season, weather, and time of day
-- be short: 2 to 6 words, like "something red" or "a bird on a wire"
-The list should mix colors, shapes, textures, plants, animals or signs of them, and things people made. Some easy, a few tricky.
+- be a real, physical thing named in plain everyday words, 2 to 6 words, like "a shell", "a red door", or "a bird on a wire"
+- be something that actually turns up in the player's setting and place
+No moods, feelings, light effects, or poetic phrases. Not "cool breeze outline" or "warm light shimmer".
+Mix plants, animals or signs of them, natural objects, and things people made. Some easy, a few tricky.
 Never include anything that needs the player to enter private property, climb, go into roads or water, touch or approach animals, eat anything, photograph strangers, go somewhere isolated or dark, or pick or damage anything.
 Reply with one JSON object and nothing else.`;
 
-export const HUNT_SHAPE = `title (2-4 words), items (array of ${HUNT_SIZE} short strings)`;
+export const HUNT_SHAPE = `title (2-4 plain words), items (array of ${HUNT_SIZE} short strings)`;
 
 export function huntPrompt(context: QuestContext | null, examples: string[]): string {
   return `${context ? `${contextLines(context)}\n\n` : ''}Write a scavenger hunt with ${HUNT_SIZE} items.

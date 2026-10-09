@@ -7,7 +7,10 @@ import {
   getSetting,
   recentQuests,
   resetDbForTests,
+  setSetting,
 } from '../src/lib/db/database';
+import { loadContext, saveContext } from '../src/features/quests/contextStore';
+import { contextKey } from '../src/features/quests/questContext';
 import { startNewQuest } from '../src/features/quests/questService';
 import { hatchCreature } from '../src/features/creatures/creatureService';
 
@@ -53,5 +56,24 @@ describe('quest and creature persistence', () => {
     expect((await getPhoto(creature.photoId!))?.blob.size).toBe(photo.size);
     expect((await getQuest(quest.id))?.status).toBe('completed');
     expect(await getSetting('activeQuestId')).toBeNull();
+  });
+});
+
+describe('quest context', () => {
+  const now = new Date(2026, 9, 8, 14).getTime();
+
+  it('remembers the place and keeps it in the context key', async () => {
+    await saveContext({ setting: 'beach', weather: 'sunny', season: 'summer', time: 'afternoon', place: '  Maui  ' }, now);
+    const { context } = await loadContext(now);
+    expect(context).toMatchObject({ setting: 'beach', place: 'Maui' });
+    expect(contextKey(context!)).not.toBe(contextKey({ ...context!, place: 'London' }));
+  });
+
+  it('asks again when an old save has the retired "open" setting', async () => {
+    await setSetting('questContext', { setting: 'open', season: 'summer', weather: 'sunny', savedAt: now });
+    const { context, draft } = await loadContext(now);
+    expect(context).toBeNull();
+    expect(draft.setting).toBeUndefined();
+    expect(draft.season).toBe('summer');
   });
 });

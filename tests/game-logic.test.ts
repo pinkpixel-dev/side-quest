@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FALLBACK_QUESTS } from '../src/features/quests/fallbackQuests';
-import { isSafeQuest, questDraftSchema } from '../src/features/quests/questSchemas';
+import { isPlain, isSafeQuest, questDraftSchema } from '../src/features/quests/questSchemas';
 import { isTooSimilar, libraryQuest, pickCategory } from '../src/features/quests/questService';
 import { animalIdea, questPrompt } from '../src/features/quests/questPrompts';
 import type { QuestContext } from '../src/features/quests/questContext';
@@ -87,13 +87,27 @@ describe('quests', () => {
 
   it('picks animal ideas that suit the setting, season, and time', () => {
     const ideas = (ctx: QuestContext) => new Set(Array.from({ length: 300 }, () => animalIdea(ctx)));
-    const winterBeach = ideas({ setting: 'open', weather: 'sunny', season: 'winter', time: 'afternoon' });
+    const winterBeach = ideas({ setting: 'beach', weather: 'sunny', season: 'winter', time: 'afternoon' });
     expect(winterBeach).toContain('gulls or shorebirds');
-    for (const idea of winterBeach) expect(idea).not.toMatch(/squirrel|bee|ants|pigeons|farm/);
+    for (const idea of winterBeach) expect(idea).not.toMatch(/squirrel|bee|ants|pigeons|farm|lizard|crab/);
+    const desert = ideas({ setting: 'desert', weather: 'hot', season: 'summer', time: 'afternoon' });
+    expect(desert).toContain('a lizard or beetle sunning itself');
+    expect(desert).not.toContain('gulls or shorebirds');
     const night = ideas({ ...city, time: 'night', season: 'summer' });
     expect([...night].sort()).toEqual(['a spider web lit up by a lamp', 'moths or bugs drawn to a porch light']);
     expect(animalIdea({ ...city, time: 'night', season: 'winter' })).toBe('a spider web lit up by a lamp');
     expect(ideas(city)).not.toContain('animal tracks pressed into snow, mud, or sand');
+  });
+
+  it('tells Gemma where in the world the player is, only when they said', () => {
+    expect(questPrompt('nature', [], 'a rock or stone', { ...city, place: 'Honolulu, Hawaii' })).toContain('in or near Honolulu, Hawaii');
+    expect(questPrompt('nature', [], 'a rock or stone', city)).not.toContain('in or near');
+  });
+
+  it('rejects poetic quests and keeps every library quest plain', () => {
+    expect(isPlain({ title: 'Breeze Hunt', description: 'Capture the outline of a cool breeze.' })).toBe(false);
+    expect(isPlain({ title: 'Shell Spotter', description: 'Find a shell with stripes on it.' })).toBe(true);
+    for (const q of FALLBACK_QUESTS) expect(isPlain(q), q.title).toBe(true);
   });
 
   it('tells Gemma to accept signs of an animal on wildlife quests only', () => {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Rarity } from '../creatures/creatureSchemas';
-import { isSafeQuest } from '../quests/questSchemas';
+import { isPlain, isSafeQuest } from '../quests/questSchemas';
 
 export const HUNT_SIZE = 10;
 /** Fewer finds than this and there's no egg. */
@@ -50,7 +50,7 @@ export const huntCheckSchema = z.object({
 });
 export type HuntCheck = z.infer<typeof huntCheckSchema>;
 
-/** Drops unsafe items and near-duplicates. Comparison ignores case and a leading "a"/"an"/"something". */
+/** Drops unsafe or poetic items and near-duplicates. Comparison ignores case and a leading "a"/"an"/"something". */
 export function cleanItems(items: string[]): string[] {
   const key = (s: string) =>
     s
@@ -61,7 +61,8 @@ export function cleanItems(items: string[]): string[] {
   const seen = new Set<string>();
   return items.filter((text) => {
     const k = key(text);
-    if (!k || seen.has(k) || !isSafeQuest({ title: '', description: text })) return false;
+    const item = { title: '', description: text };
+    if (!k || seen.has(k) || !isSafeQuest(item) || !isPlain(item)) return false;
     seen.add(k);
     return true;
   });

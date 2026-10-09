@@ -10,7 +10,7 @@ interface LibraryItem {
   weather?: QuestContext['weather'][];
 }
 
-const NOT_BEACH: QuestContext['setting'][] = ['city', 'suburb', 'park', 'countryside'];
+const NOT_SANDY: QuestContext['setting'][] = ['city', 'suburb', 'park', 'countryside'];
 const GREEN: QuestContext['setting'][] = ['suburb', 'park', 'countryside'];
 const BUILT: QuestContext['setting'][] = ['city', 'suburb', 'park'];
 
@@ -50,16 +50,16 @@ export const HUNT_ITEMS: LibraryItem[] = [
   { text: 'your own shadow', when: 'day', weather: ['sunny', 'hot', 'windy', 'snowy'] },
 
   // Green places.
-  { text: 'a leaf bigger than your hand', settings: NOT_BEACH, noWinter: true, when: 'day' },
-  { text: 'a flower', settings: NOT_BEACH, noWinter: true },
-  { text: 'moss', settings: NOT_BEACH, when: 'day' },
-  { text: 'tree bark up close', settings: NOT_BEACH },
+  { text: 'a leaf bigger than your hand', settings: NOT_SANDY, noWinter: true, when: 'day' },
+  { text: 'a flower', settings: NOT_SANDY, noWinter: true },
+  { text: 'moss', settings: NOT_SANDY, when: 'day' },
+  { text: 'tree bark up close', settings: NOT_SANDY },
   { text: 'a pinecone, acorn, or seed pod', settings: GREEN, when: 'day' },
   { text: 'a mushroom', settings: GREEN, noWinter: true, when: 'day' },
   { text: 'a squirrel or signs of one', settings: [...GREEN, 'city'], noWinter: true, when: 'day' },
-  { text: 'a bug or a spider web', settings: NOT_BEACH, noWinter: true },
+  { text: 'a bug or a spider web', settings: NOT_SANDY, noWinter: true },
   { text: 'a fence post', settings: GREEN, when: 'day' },
-  { text: 'a heart shape in nature', settings: NOT_BEACH, when: 'day' },
+  { text: 'a heart shape in nature', settings: NOT_SANDY, when: 'day' },
   { text: 'grass taller than your ankle', settings: GREEN, noWinter: true, when: 'day' },
 
   // Built places.
@@ -74,14 +74,29 @@ export const HUNT_ITEMS: LibraryItem[] = [
   { text: 'a mural or graffiti', settings: ['city'] },
   { text: 'a window box or potted plant', settings: ['city', 'suburb'], noWinter: true },
 
-  // Beach and desert.
-  { text: 'a shell', settings: ['open'], when: 'day' },
-  { text: 'a gull or shorebird', settings: ['open'], when: 'day' },
-  { text: 'footprints in sand or dirt', settings: ['open', 'countryside'], when: 'day' },
-  { text: 'a smooth stone', settings: ['open', 'countryside', 'park'] },
-  { text: 'a tough little desert or dune plant', settings: ['open'] },
-  { text: 'driftwood or a sun-bleached stick', settings: ['open'], when: 'day' },
-  { text: 'a wavy pattern in sand', settings: ['open'], when: 'day' },
+  // Sand underfoot.
+  { text: 'footprints in sand or dirt', settings: ['beach', 'desert', 'countryside'], when: 'day' },
+  { text: 'a wavy pattern in sand', settings: ['beach', 'desert'], when: 'day' },
+
+  // Beach.
+  { text: 'a shell', settings: ['beach'], when: 'day' },
+  { text: 'a gull or shorebird', settings: ['beach'], when: 'day' },
+  { text: 'a smooth stone', settings: ['beach', 'countryside', 'park'] },
+  { text: 'driftwood', settings: ['beach'], when: 'day' },
+  { text: 'seaweed on the sand', settings: ['beach'], when: 'day' },
+  { text: 'a crab or a crab hole', settings: ['beach'], noWinter: true, when: 'day' },
+  { text: 'a boat', settings: ['beach'] },
+  { text: 'a beach umbrella or towel', settings: ['beach'], noWinter: true, when: 'day' },
+  { text: 'a dune plant', settings: ['beach'], when: 'day' },
+
+  // Desert.
+  { text: 'a cactus', settings: ['desert'] },
+  { text: 'a lizard or its tracks', settings: ['desert'], noWinter: true, when: 'day' },
+  { text: 'cracked dry ground', settings: ['desert'], when: 'day' },
+  { text: 'a dry shrub or tumbleweed', settings: ['desert'] },
+  { text: 'a sun-bleached stick or bone', settings: ['desert'], when: 'day' },
+  { text: 'a red or orange rock', settings: ['desert'], when: 'day' },
+  { text: 'a hawk or raven', settings: ['desert'], when: 'day' },
 
   // Countryside.
   { text: 'a farm animal seen from the path', settings: ['countryside'], when: 'day' },

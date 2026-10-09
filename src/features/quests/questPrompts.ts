@@ -1,5 +1,5 @@
 import { FALLBACK_QUESTS } from './fallbackQuests';
-import type { QuestContext } from './questContext';
+import { cleanPlace, type QuestContext } from './questContext';
 import type { QuestCategory, QuestDraft } from './questSchemas';
 
 export const QUEST_SYSTEM = `You write tiny outdoor quests for Side Quest, a game that gets people off their screens.
@@ -8,7 +8,9 @@ Every quest must:
 - need no special equipment and take 5 to 30 minutes
 - reward noticing things up close, not traveling far
 - be checkable from a single photo
+- be about a real, physical thing the player can point at, in plain everyday words
 - feel playful, not educational or clinical
+No poetry, moods, or abstract ideas: not "the essence of autumn" or "a whisper of light", but "a leaf bigger than your hand" or "a bird on a wire".
 Never ask the player to: enter private property, climb anything, go into roads or traffic, enter water, touch or approach animals, touch unknown plants, eat or taste anything, approach or photograph strangers, go somewhere isolated or poorly lit, enter abandoned buildings, or pick, collect, or damage anything.
 Reply with one JSON object and nothing else.`;
 
@@ -17,26 +19,26 @@ export const QUEST_SHAPE =
 
 /** Small concrete starting points. Small models get far more inventive with one to build on. */
 export const QUEST_FOCUSES = [
-  'shadows',
   'something round',
-  'tiny details',
-  'reflections',
-  'signs of weather',
-  'something that moves in the wind',
-  'opposites side by side',
-  'a surprising color',
-  'something worn down by time',
-  'patterns that repeat',
-  'something hiding in plain sight',
-  'edges where two things meet',
-  'light and glow',
-  'something that looks like something else',
-  'lines and stripes',
-  'something very small next to something very big',
-  'textures you could feel with your eyes',
-  'a sign that something living passed by',
-  'numbers or letters made by accident',
-  'something that changes with the season',
+  'something with stripes or spots',
+  'a plant that grows here',
+  'a rock or stone',
+  'something red, yellow, or blue',
+  'something tiny',
+  'something really old',
+  'a sign, label, or number',
+  'something that looks like a face',
+  'something the weather left behind',
+  'a shadow',
+  'a reflection',
+  'something soft',
+  'something rough or bumpy',
+  'two things that match',
+  'something a lot of people walk past without noticing',
+  'something that only shows up this time of year',
+  'something typical of this place',
+  'a sign that an animal passed by',
+  'something people made that nature is taking back',
 ] as const;
 
 interface AnimalIdea {
@@ -58,8 +60,11 @@ const ANIMAL_IDEAS: AnimalIdea[] = [
   { idea: 'a sign that birds live nearby, like a nest, feathers, or droppings' },
   { idea: 'pigeons or sparrows going about their day', settings: ['city', 'suburb', 'park'] },
   { idea: 'a squirrel or chipmunk busy with something', settings: ['suburb', 'park', 'countryside', 'city'], noWinter: true },
-  { idea: 'gulls or shorebirds', settings: ['open'] },
-  { idea: 'a lizard or beetle sunning itself', settings: ['open', 'countryside', 'park'], noWinter: true },
+  { idea: 'gulls or shorebirds', settings: ['beach'] },
+  { idea: 'a crab or the little holes crabs dig in the sand', settings: ['beach'], noWinter: true },
+  { idea: 'a lizard or beetle sunning itself', settings: ['desert', 'countryside', 'park'], noWinter: true },
+  { idea: 'a hawk, raven, or other bird over open ground', settings: ['desert', 'countryside'] },
+  { idea: 'tracks or trails left in the sand', settings: ['beach', 'desert'] },
   { idea: 'a bee, butterfly, or other insect visiting a flower', noWinter: true },
   { idea: 'ants or another tiny creature at work', noWinter: true },
   { idea: 'a spider web and whoever built it' },
@@ -94,7 +99,8 @@ const SETTING_NOTES: Record<QuestContext['setting'], string> = {
   suburb: 'a suburb: yards, sidewalks, gardens, and street trees',
   park: 'a park: lawns, trees, paths, and benches',
   countryside: 'the countryside: fields, hedges, trees, and dirt paths',
-  open: 'an open place like a beach or desert: sand, rocks, sky, and hardy plants. Do not depend on trees or leaves',
+  beach: 'a beach: sand, shells, seaweed, rocks, driftwood, and shorebirds. Do not depend on trees or leaves',
+  desert: 'a desert: sand, rocks, cacti, dry shrubs, and lizards. Do not depend on water, trees, or leaves',
 };
 
 const WEATHER_NOTES: Partial<Record<QuestContext['weather'], string>> = {
@@ -107,12 +113,15 @@ const WEATHER_NOTES: Partial<Record<QuestContext['weather'], string>> = {
 const TIME_NOTES: Partial<Record<QuestContext['time'], string>> = {
   evening: 'It is evening, so the light is low and changing.',
   night:
-    'It is dark out. The quest must work in a well-lit spot close to home, like a porch, a lit sidewalk, a shop window, or the view from a window. Lights, glow, reflections, the moon, and night-time shadows are great subjects.',
+    'It is dark out. The quest must work in a well-lit spot close to home, like a porch, a lit sidewalk, a shop window, or the view from a window. Streetlights, lit windows, the moon, shop signs, and bugs around a lamp are good subjects.',
 };
 
 export function contextLines(context: QuestContext): string {
+  const place = cleanPlace(context.place);
   return [
     `The player is in ${SETTING_NOTES[context.setting]}.`,
+    place &&
+      `They are in or near ${place}. Only pick plants, animals, and everyday sights that are actually common there.`,
     `It is ${context.season}, ${context.weather}, ${context.time === 'night' ? 'at night' : `in the ${context.time}`}.`,
     WEATHER_NOTES[context.weather],
     TIME_NOTES[context.time],

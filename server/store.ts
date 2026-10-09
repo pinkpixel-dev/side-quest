@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { Find, HuntResult, HuntSubmission } from '../src/lib/home/protocol.ts';
 import type { HuntDraft } from '../src/features/hunts/huntSchemas.ts';
 import type { QuestDraft } from '../src/features/quests/questSchemas.ts';
-import { contextKey, type QuestContext } from '../src/features/quests/questContext.ts';
+import { contextKey, isQuestContext, type QuestContext } from '../src/features/quests/questContext.ts';
 
 interface State {
   token: string;
@@ -35,6 +35,8 @@ export class Store {
       : { token: randomBytes(24).toString('base64url'), finds: [], questPool: [] };
     this.state.hunts ??= [];
     this.state.huntPool ??= [];
+    // A context saved before a setting was renamed would give Gemma a broken prompt.
+    if (this.state.context && !isQuestContext(this.state.context)) delete this.state.context;
     this.save();
   }
 

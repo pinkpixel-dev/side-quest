@@ -4,9 +4,11 @@ import {
   Cloud,
   CloudRain,
   Compass,
+  Globe,
   House,
   Leaf,
   Moon,
+  Mountain,
   Snowflake,
   Sprout,
   Sun,
@@ -21,11 +23,13 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/Button';
 import {
+  PLACE_MAX,
   SEASONS,
   SETTINGS,
   SETTING_LABELS,
   TIMES,
   WEATHERS,
+  cleanPlace,
   type QuestContext,
   type QuestSetting,
   type Season,
@@ -40,7 +44,8 @@ const SETTING_ICONS: Record<QuestSetting, Icon> = {
   suburb: House,
   park: Trees,
   countryside: Wheat,
-  open: Waves,
+  beach: Waves,
+  desert: Mountain,
 };
 const WEATHER_ICONS: Record<Weather, Icon> = {
   sunny: Sun,
@@ -111,7 +116,7 @@ function ChipGroup<T extends string>({
   );
 }
 
-/** Four quick taps: where, weather, time, season. Prefilled from last time and the clock. */
+/** An optional place, then four quick taps: setting, weather, time, season. Prefilled from last time and the clock. */
 export function ContextForm({
   initial,
   onSubmit,
@@ -139,13 +144,32 @@ export function ContextForm({
         if (!complete) return;
         setSaving(true);
         try {
-          await onSubmit(draft as QuestContext);
+          await onSubmit({ ...(draft as QuestContext), place: cleanPlace(draft.place) });
         } finally {
           setSaving(false);
         }
       }}
     >
       <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Where are you headed?</h1>
+      <div className="grid gap-2">
+        <label htmlFor="place" className="text-sm font-semibold text-bark-2">
+          Where in the world <span className="font-normal">(optional)</span>
+        </label>
+        <div className="relative max-w-md">
+          <Globe className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-bark-2" aria-hidden />
+          <input
+            id="place"
+            type="text"
+            autoComplete="off"
+            enterKeyHint="done"
+            maxLength={PLACE_MAX}
+            placeholder="Hawaii, London, Mendoza…"
+            value={draft.place ?? ''}
+            onChange={(e) => setDraft((d) => ({ ...d, place: e.target.value }))}
+            className="min-h-11 w-full rounded-full border border-bark/25 bg-transparent pr-4 pl-10 text-base text-bark transition-[border-color] duration-150 placeholder:text-bark-2/70 hover:border-bark/50 focus-visible:border-bark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bark"
+          />
+        </div>
+      </div>
       <ChipGroup
         legend="Setting"
         name="setting"
@@ -186,7 +210,10 @@ export function ContextForm({
   );
 }
 
-/** One-line summary, e.g. "City · Rainy · Night · Autumn". */
+/** One-line summary, e.g. "London · City · Rainy · Night · Autumn". */
 export function contextSummary(c: QuestContext): string {
-  return [SETTING_LABELS[c.setting], capitalize(c.weather), capitalize(c.time), capitalize(c.season)].join(' · ');
+  const place = cleanPlace(c.place);
+  return [...(place ? [place] : []), SETTING_LABELS[c.setting], capitalize(c.weather), capitalize(c.time), capitalize(c.season)].join(
+    ' · ',
+  );
 }

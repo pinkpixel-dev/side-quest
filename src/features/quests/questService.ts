@@ -5,7 +5,7 @@ import { recentQuests, saveQuest, setSetting } from '../../lib/db/database';
 import { FALLBACK_QUESTS } from './fallbackQuests';
 import type { QuestContext } from './questContext';
 import { QUEST_FOCUSES, QUEST_SHAPE, QUEST_SYSTEM, animalIdea, questPrompt } from './questPrompts';
-import { QUEST_CATEGORIES, isSafeQuest, questDraftSchema, type Quest, type QuestCategory, type QuestDraft } from './questSchemas';
+import { QUEST_CATEGORIES, isPlain, isSafeQuest, questDraftSchema, type Quest, type QuestCategory, type QuestDraft } from './questSchemas';
 
 type Recent = Pick<QuestDraft, 'title' | 'description' | 'category'>;
 
@@ -14,7 +14,7 @@ const anyOf = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * it
 /** A library quest the player hasn't seen recently that suits where and when they are. */
 export function libraryQuest(recentTitles: string[], context?: QuestContext | null): QuestDraft {
   const night = context?.time === 'night';
-  const noWild = context?.setting === 'city' || context?.setting === 'open';
+  const noWild = context?.setting === 'city' || context?.setting === 'beach' || context?.setting === 'desert';
   const suitable = FALLBACK_QUESTS.filter((q) => !!q.night === night && !(noWild && q.wild));
   const fresh = suitable.filter((q) => !recentTitles.includes(q.title));
   const { wild: _wild, night: _night, ...draft } = anyOf(fresh.length ? fresh : suitable);
@@ -58,7 +58,7 @@ export function isTooSimilar(draft: Pick<QuestDraft, 'title' | 'description'>, r
 
 /**
  * Has Gemma write a fresh quest. Tries a second category and idea if the first comes back
- * too close to something recent. Null when nothing passes validation or the safety filter.
+ * too close to something recent. Null when nothing passes validation, the safety filter, or the plain-words check.
  */
 export async function writeQuest(gemma: GemmaClient, recent: Recent[], context: QuestContext | null): Promise<QuestDraft | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -74,7 +74,7 @@ export async function writeQuest(gemma: GemmaClient, recent: Recent[], context: 
       },
       { schema: questDraftSchema, shape: QUEST_SHAPE },
     );
-    if (draft && isSafeQuest(draft) && !isTooSimilar(draft, recent.slice(0, 10))) return draft;
+    if (draft && isSafeQuest(draft) && isPlain(draft) && !isTooSimilar(draft, recent.slice(0, 10))) return draft;
   }
   return null;
 }

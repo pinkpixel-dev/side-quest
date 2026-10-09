@@ -46,3 +46,14 @@ export function isSafeQuest(q: Pick<QuestDraft, 'title' | 'description'>): boole
   const text = `${q.title} ${q.description}`;
   return !UNSAFE.some((re) => re.test(text));
 }
+
+/**
+ * Words that mean Gemma drifted into poetry ("Cool breeze outline", "Warm light shimmer").
+ * Nobody can point a camera at those, so they get thrown out like unsafe ones.
+ */
+const ABSTRACT =
+  /\b(breeze|shimmer(ing|s)?|outline|silhouette|essence|whisper(s|ing)?|aura|spirit|mood|feeling|memor(y|ies)|dream(s|y)?|streak|echo(es)?|serene|ethereal|faint|hint of|touch of|sense of)\b/i;
+
+export function isPlain(q: Pick<QuestDraft, 'title' | 'description'>): boolean {
+  return !ABSTRACT.test(`${q.title} ${q.description}`);
+}

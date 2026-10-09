@@ -1,5 +1,5 @@
 import { getSetting, setSetting } from '../../lib/db/database';
-import { timeOfDay, type QuestContext, type QuestSetting, type Season, type TimeOfDay, type Weather } from './questContext';
+import { SETTINGS, cleanPlace, timeOfDay, type QuestContext, type QuestSetting, type Season, type TimeOfDay, type Weather } from './questContext';
 
 /** Weather (and a manual time pick) go stale after a few hours, so the form asks again next outing. */
 export const CONTEXT_FRESH_MS = 4 * 60 * 60 * 1000;
@@ -10,6 +10,7 @@ interface SavedContext {
   weather: Weather;
   /** Only set when the player picked a time other than the clock's. */
   timeOverride?: TimeOfDay;
+  place?: string;
   savedAt: number;
 }
 
@@ -25,8 +26,17 @@ export async function loadContext(now = Date.now()): Promise<LoadedContext> {
   const fresh = !!saved && now - saved.savedAt < CONTEXT_FRESH_MS;
   const time = (fresh && saved.timeOverride) || timeOfDay(new Date(now));
   if (!saved) return { context: null, draft: { time } };
-  const draft = { setting: saved.setting, season: saved.season, time, ...(fresh ? { weather: saved.weather } : {}) };
-  return { context: fresh ? { ...draft, weather: saved.weather } : null, draft };
+  // Older saves can hold a setting that no longer exists (the old "open"), so ask again.
+  const known = (SETTINGS as readonly string[]).includes(saved.setting);
+  const place = cleanPlace(saved.place);
+  const draft = {
+    ...(known ? { setting: saved.setting } : {}),
+    season: saved.season,
+    time,
+    ...(place ? { place } : {}),
+    ...(fresh ? { weather: saved.weather } : {}),
+  };
+  return { context: fresh && known ? { ...draft, setting: saved.setting, weather: saved.weather } : null, draft };
 }
 
 export async function saveContext(context: QuestContext, now = Date.now()): Promise<void> {
@@ -36,6 +46,7 @@ export async function saveContext(context: QuestContext, now = Date.now()): Prom
     season: context.season,
     weather: context.weather,
     timeOverride: context.time === auto ? undefined : context.time,
+    place: cleanPlace(context.place),
     savedAt: now,
   } satisfies SavedContext);
 }
