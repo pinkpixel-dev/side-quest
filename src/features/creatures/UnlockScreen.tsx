@@ -22,6 +22,9 @@ export function UnlockScreen({ id }: { id: string }) {
         <div className="anim-pop-in">
           <CreatureRenderer creature={creature} animate className="w-full" />
         </div>
+        <span className="stamp anim-stamp absolute top-5 right-5 text-xl" style={step(1250)}>
+          Found
+        </span>
       </div>
 
       <div className="grid justify-items-center gap-3">

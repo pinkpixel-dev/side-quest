@@ -59,7 +59,7 @@ export function QuestScreen() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
         <article
           aria-busy={!showForm && (busy || !quest)}
-          className="paper anim-rise relative grid min-h-80 content-start gap-5 rounded-3xl p-6 shadow-[0_1px_0_oklch(1_0_0/0.4)_inset] sm:p-10"
+          className="paper journal anim-rise grid min-h-80 content-start gap-5 rounded-3xl p-6 shadow-[0_1px_0_oklch(1_0_0/0.4)_inset] sm:p-10"
         >
           {showForm && loaded ? (
             <ContextForm

@@ -18,7 +18,8 @@ import { abandonHunt, finishHunt, snapItem, startHunt } from './huntService';
 import { submitHunt } from './huntSync';
 import { useHunt, useThumbs } from './useHunt';
 
-type Checking = { done: number; total: number; current?: string };
+/** `hatching` flips on once every photo is checked and enough were found: Gemma is now designing the creature. */
+type Checking = { done: number; total: number; current?: string; hatching?: boolean };
 
 export function HuntScreen({ id }: { id?: string }) {
   const { client, state } = useGemma();
@@ -81,7 +82,8 @@ export function HuntScreen({ id }: { id?: string }) {
       const done = await finishHunt(client, hunt, (n, total, last) => {
         if (last) live = { ...live, items: live.items.map((i) => (i.id === last.id ? { ...i, ...last } : i)) };
         setHunt(live);
-        setChecking({ done: n, total, current: snapped[n]?.id });
+        const hatching = n === total && live.items.filter((i) => i.found).length >= MIN_TO_HATCH;
+        setChecking({ done: n, total, current: snapped[n]?.id, hatching });
       });
       setHunt(done);
     } catch (err) {
@@ -122,7 +124,7 @@ export function HuntScreen({ id }: { id?: string }) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
         <article
           aria-busy={starting || !!checking}
-          className="paper anim-rise grid min-h-80 content-start gap-4 rounded-3xl p-5 shadow-[0_1px_0_oklch(1_0_0/0.4)_inset] sm:p-10"
+          className="paper journal anim-rise grid min-h-80 content-start gap-4 rounded-3xl p-5 shadow-[0_1px_0_oklch(1_0_0/0.4)_inset] sm:p-10"
         >
           {showForm ? (
             <ContextForm
@@ -138,6 +140,11 @@ export function HuntScreen({ id }: { id?: string }) {
                 {hunt.source === 'gemma' && (
                   <span className="inline-flex items-center gap-1 normal-case tracking-normal">
                     · <Sparkles className="size-3" aria-hidden /> written by Gemma
+                  </span>
+                )}
+                {hunt.status === 'completed' && (
+                  <span className="stamp anim-stamp ml-auto text-base">
+                    {foundCount(hunt)}/{hunt.items.length} found
                   </span>
                 )}
               </div>
@@ -191,10 +198,14 @@ export function HuntScreen({ id }: { id?: string }) {
 
           {checking && (
             <div className="grid justify-items-center gap-3 rounded-2xl border border-ink-3 bg-ink-2 p-6" role="status">
-              <Egg className="anim-wobble w-28" />
-              <p className="text-fog">
-                Checking {Math.min(checking.done + 1, checking.total)} of {checking.total}…
-              </p>
+              <Egg className={`w-28 ${checking.hatching ? 'anim-hatching' : 'anim-wobble'}`} />
+              {checking.hatching ? (
+                <p className="anim-pulse font-display text-lg font-bold text-moss">Hatching…</p>
+              ) : (
+                <p className="text-fog">
+                  Checking {Math.min(checking.done + 1, checking.total)} of {checking.total}…
+                </p>
+              )}
             </div>
           )}
 
