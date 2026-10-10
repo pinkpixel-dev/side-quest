@@ -12,8 +12,9 @@ const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: 
 const QR_COLORS = { dark: '#1f2620', light: '#f3efe2' };
 
 /** Hosted site: a one-time sign-in code for the phone, swapped for a fresh one before it expires. */
-function useLinkQr(): { svg: string | null; failed: boolean } {
+function useLinkQr(): { svg: string | null; url: string | null; failed: boolean } {
   const [svg, setSvg] = useState<string | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let stopped = false;
@@ -21,12 +22,13 @@ function useLinkQr(): { svg: string | null; failed: boolean } {
     const refresh = async () => {
       let next = 10_000;
       try {
-        const { url, expiresAt } = await accountApi.linkCode();
-        const fresh = await QRCode.toString(url, { type: 'svg', margin: 1, color: QR_COLORS });
+        const code = await accountApi.linkCode();
+        const fresh = await QRCode.toString(code.url, { type: 'svg', margin: 1, color: QR_COLORS });
         if (stopped) return;
         setSvg(fresh);
+        setUrl(code.url);
         setFailed(false);
-        next = Math.max(10_000, expiresAt - Date.now() - 15_000);
+        next = Math.max(10_000, code.expiresAt - Date.now() - 15_000);
       } catch {
         if (!stopped) setFailed(true);
       }
@@ -38,7 +40,7 @@ function useLinkQr(): { svg: string | null; failed: boolean } {
       clearTimeout(timer);
     };
   }, []);
-  return { svg, failed };
+  return { svg, url, failed };
 }
 
 function QrBox({ svg, waitingText }: { svg: string | null; waitingText: string }) {
@@ -58,10 +60,16 @@ function QrBox({ svg, waitingText }: { svg: string | null; waitingText: string }
 }
 
 function HostedQr({ login }: { login: string }) {
-  const { svg, failed } = useLinkQr();
+  const { svg, url, failed } = useLinkQr();
   return (
     <>
       <QrBox svg={svg} waitingText={failed ? 'No connection. Retrying…' : 'Making a code…'} />
+      {url && (
+        <details className="text-sm text-fog">
+          <summary className="cursor-pointer rounded hover:text-snow">Sign-in link</summary>
+          <p className="mt-2 break-all font-mono text-xs">{url}</p>
+        </details>
+      )}
       <p className="text-sm text-fog">
         Signed in as{' '}
         <Link href="/account" className="rounded underline decoration-ink-3 underline-offset-4 hover:text-snow">

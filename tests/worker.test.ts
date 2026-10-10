@@ -187,3 +187,34 @@ describe('account deletion', () => {
     }
   });
 });
+
+describe('collection sync', () => {
+  const creature = { id: 'c-1', name: 'Mossling', discoveredAt: 5 };
+
+  it('stores a creature once, with its photo, for its owner only', async () => {
+    const alice = await signUp();
+    const bob = await signUp();
+    expect((await call('/api/creatures', alice.cookie, { body: { creature, photo: jpeg } })).status).toBe(201);
+    expect((await call('/api/creatures', alice.cookie, { body: { creature } })).status).toBe(201); // retry, no photo
+
+    expect(await body(call('/api/creatures', alice.cookie))).toEqual([{ creature, hasPhoto: true }]);
+    const photo = await call('/api/creatures/c-1/photo', alice.cookie);
+    expect(Buffer.from(await photo.arrayBuffer())).toEqual(jpegBytes);
+
+    expect(await body(call('/api/creatures', bob.cookie))).toEqual([]);
+    expect((await call('/api/creatures/c-1/photo', bob.cookie)).status).toBe(404);
+  });
+
+  it('rejects something that is not a creature', async () => {
+    const { cookie } = await signUp();
+    expect((await call('/api/creatures', cookie, { body: { creature: { id: '../x', name: 'Nope' } } })).status).toBe(400);
+  });
+
+  it('goes away with the account', async () => {
+    const { id, cookie } = await signUp();
+    await call('/api/creatures', cookie, { body: { creature, photo: jpeg } });
+    await call('/api/account/delete', cookie, { body: {} });
+    expect(await env.PHOTOS.head(`${id}/creatures/c-1.jpg`)).toBeNull();
+    expect(await env.DB.prepare('SELECT 1 FROM creatures WHERE user_id = ?').bind(id).first()).toBeNull();
+  });
+});

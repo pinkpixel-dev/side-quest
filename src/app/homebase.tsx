@@ -7,6 +7,7 @@ import { processFind, processHunt, writeHuntForPhone, writeQuestForPhone } from 
 import { syncHunts } from '../features/hunts/huntSync';
 import type { Hunt } from '../features/hunts/huntSchemas';
 import { syncFinds } from '../features/field/fieldSync';
+import { syncCollection } from '../features/collection/collectionSync';
 import { useGemma } from './gemma';
 
 /**
@@ -57,6 +58,8 @@ const BASE_TICK_MS = 4_000;
 /** Nothing to do last time: check less often. Every check-in on the hosted site is a request. */
 const BASE_IDLE_MS = 20_000;
 const FIELD_TICK_MS = 10_000;
+/** Collection sync is cheap when nothing changed (one small list), but there's no rush either. */
+const COLLECTION_TICK_MS = 5 * 60_000;
 
 export function HomeBaseProvider({ children }: { children: ReactNode }) {
   const { client, state } = useGemma();
@@ -137,6 +140,33 @@ export function HomeBaseProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     decide();
   }, [decide]);
+
+  // --- signed in: the collection follows the account to every device ----------------
+  const userId = account?.user.id;
+  useEffect(() => {
+    if (!userId) return;
+    let running = false;
+    const run = async () => {
+      if (running || document.visibilityState !== 'visible') return;
+      running = true;
+      try {
+        await syncCollection();
+      } catch (err) {
+        console.warn('Collection sync failed', err);
+      } finally {
+        running = false;
+      }
+    };
+    run();
+    const timer = setInterval(run, COLLECTION_TICK_MS);
+    document.addEventListener('visibilitychange', run);
+    window.addEventListener('online', run);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', run);
+      window.removeEventListener('online', run);
+    };
+  }, [userId]);
 
   // --- field: talk to the home base whenever there's signal ------------------------
   const sync = useCallback(async () => {

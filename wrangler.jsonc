@@ -24,7 +24,7 @@
   // Local dev overrides both in .dev.vars.
   "vars": {
     "APP_ORIGIN": "https://side-quest.pinkpixel.dev",
-    "GITHUB_CLIENT_ID": ""
+    "GITHUB_CLIENT_ID": "Ov23lioFgP2ZWlKM77F6"
   },
   "observability": { "enabled": true }
 }

@@ -10,8 +10,9 @@ export function AboutScreen() {
           it. If you did, a creature inspired by your photo hatches into your collection.
         </p>
         <p>
-          Your photos stay on your device. Gemma, Google's open-weight model, runs right here in your browser on your
-          own GPU. No account, no cloud, no location tracking.
+          Gemma, Google's open-weight model, runs right here in your browser on your own GPU. Playing solo, your photos
+          never leave this device. If you sign in to play on your phone, photos travel through Side Quest's server to
+          your computer and stay there until you delete your account. No location tracking.
         </p>
       </div>
       <ModelStatus className="justify-self-start" />

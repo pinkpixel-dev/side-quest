@@ -146,7 +146,7 @@ export async function deleteAccount(env: Env, user: User): Promise<Response> {
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
 
-  const tables = ['sessions', 'link_codes', 'finds', 'hunts', 'pool', 'user_state'];
+  const tables = ['sessions', 'link_codes', 'finds', 'hunts', 'pool', 'user_state', 'creatures'];
   await env.DB.batch([
     ...tables.map((t) => env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id)),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
