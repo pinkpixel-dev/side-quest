@@ -17,5 +17,5 @@
 - Your creature collection syncs to every device signed into your account, photos included. Creatures from before you signed in get uploaded too.
 
 ### 🎨 Interface
-- The home page hero and specimen sheet fit on one screen on desktop.
+- The whole home page fits on one screen on desktop. The specimen sheet is now a wide 4 x 2 page with one featured creature and four small ones, and "How it goes" sits right under the hero.
 - The About page now explains where photos go when you're signed in.

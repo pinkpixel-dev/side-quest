@@ -5,21 +5,19 @@ import type { Creature } from '../creatures/creatureSchemas';
 import { CreatureRenderer } from '../creatures/CreatureRenderer';
 import { sampleSpecimens, type Specimen } from './sampleCreatures';
 
-/** One big plus five small fills the 3 x 3 grid. */
-const SHOWN = 6;
+/** One big plus four small fills the 4 x 2 grid. */
+const SHOWN = 5;
 
 /** A taped-in journal page of creatures: yours once you have some, examples until then. */
 export function SpecimenSheet({ creatures }: { creatures: Creature[] }) {
   const mine = creatures.length > 0;
-  const specimens: Specimen[] = mine ? creatures.slice(0, SHOWN) : sampleSpecimens;
+  const specimens: Specimen[] = mine ? creatures.slice(0, SHOWN) : sampleSpecimens.slice(0, SHOWN);
 
   return (
-    // The cells are square, so the sheet is about as tall as it is wide. On desktop, cap the
-    // width by the viewport height so the whole hero fits on screen without scrolling.
-    <section
-      aria-labelledby="specimens"
-      className="paper journal grid gap-4 rounded-3xl p-4 sm:p-6 lg:ml-auto lg:w-[min(100%,calc(100dvh-23rem))] lg:min-w-[22rem]"
-    >
+    // A wide sheet: the cells are square, so it's about half as tall as it is wide. That leaves
+    // room for the trail below. On desktop, cap the width by the viewport height so the whole
+    // landing page fits on screen without scrolling.
+    <section aria-labelledby="specimens" className="paper journal grid gap-4 rounded-3xl p-4 sm:p-6 lg:ml-auto lg:w-[min(100%,calc((100dvh-42rem)*2))] lg:min-w-[30rem]">
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="specimens" className="text-2xl font-extrabold tracking-tight">
           {mine ? (creatures.length === 1 ? '1 creature found' : `${creatures.length} creatures found`) : 'Spotted nearby'}
@@ -36,9 +34,9 @@ export function SpecimenSheet({ creatures }: { creatures: Creature[] }) {
         )}
       </div>
 
-      <ul className="grid grid-cols-3 gap-2 sm:gap-3">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {specimens.map((s, i) => (
-          <li key={s.id} className={i === 0 ? 'col-span-2 row-span-2' : ''}>
+          <li key={s.id} className={i === 0 ? 'col-span-2 sm:row-span-2' : ''}>
             <SpecimenCell specimen={s} number={i + 1} big={i === 0} href={mine ? `/creature/${s.id}` : undefined} />
           </li>
         ))}

@@ -22,7 +22,7 @@ export function TrailSteps() {
             <span className="grid gap-1 pt-1 md:pt-0">
               <span className="font-mono text-xs text-fog">Stop {i + 1}</span>
               <span className="font-display text-xl font-bold">{title}</span>
-              <span className="max-w-xs text-fog">{text}</span>
+              <span className="max-w-xs text-fog lg:max-w-md">{text}</span>
             </span>
           </li>
         ))}

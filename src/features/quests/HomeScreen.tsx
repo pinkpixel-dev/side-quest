@@ -20,7 +20,7 @@ export function HomeScreen() {
   }, []);
 
   return (
-    <div className="grid gap-16 lg:gap-24">
+    <div className="grid gap-16 lg:gap-12">
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center lg:gap-16">
         <section className="anim-rise grid content-start gap-6">
           <h1 className="text-6xl leading-[0.92] font-extrabold tracking-tight sm:text-8xl xl:text-9xl">Side Quest</h1>
