@@ -19,3 +19,6 @@
 ### 🎨 Interface
 - The whole home page fits on one screen on desktop. The specimen sheet is now a wide 4 x 2 page with one featured creature and four small ones, and "How it goes" sits right under the hero.
 - The About page now explains where photos go when you're signed in.
+
+### 🐛 Fixes
+- If the GPU drops out while Gemma is working ("device lost"), Gemma now shows Retry instead of staying "ready" and failing every photo until you reload.

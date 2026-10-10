@@ -128,15 +128,19 @@ async function generate(req: GenerateRequest) {
 // One job at a time: generation waits for the load to finish.
 let queue: Promise<void> = Promise.resolve();
 
+/** ONNX Runtime surfaces a lost WebGPU device as "[Device] is lost". Every later job would fail too. */
+const deviceLost = (message: string) => /device\]? (is |was )?lost/i.test(message);
+
 self.onmessage = (e: MessageEvent<ToWorker>) => {
   const msg = e.data;
   const run = msg.type === 'load' ? () => load(msg.model) : () => generate(msg);
   queue = queue.then(run).catch((err) => {
+    const message = err instanceof Error ? err.message : String(err);
     post({
       type: 'error',
       id: msg.type === 'generate' ? msg.id : undefined,
-      fatal: msg.type === 'load',
-      message: err instanceof Error ? err.message : String(err),
+      fatal: msg.type === 'load' || deviceLost(message),
+      message,
     });
   });
 };
