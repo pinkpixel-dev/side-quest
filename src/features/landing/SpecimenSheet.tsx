@@ -14,7 +14,12 @@ export function SpecimenSheet({ creatures }: { creatures: Creature[] }) {
   const specimens: Specimen[] = mine ? creatures.slice(0, SHOWN) : sampleSpecimens;
 
   return (
-    <section aria-labelledby="specimens" className="paper journal grid gap-4 rounded-3xl p-4 sm:p-6">
+    // The cells are square, so the sheet is about as tall as it is wide. On desktop, cap the
+    // width by the viewport height so the whole hero fits on screen without scrolling.
+    <section
+      aria-labelledby="specimens"
+      className="paper journal grid gap-4 rounded-3xl p-4 sm:p-6 lg:ml-auto lg:w-[min(100%,calc(100dvh-23rem))] lg:min-w-[22rem]"
+    >
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="specimens" className="text-2xl font-extrabold tracking-tight">
           {mine ? (creatures.length === 1 ? '1 creature found' : `${creatures.length} creatures found`) : 'Spotted nearby'}
